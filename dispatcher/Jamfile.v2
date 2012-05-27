@@ -7,6 +7,8 @@ alias my_library :
 ../listener//listener/<link>static
 ../protocol//protocol/<link>static
 ../io//io/<link>static
+../data_proxy//data_proxy/<link>static
+../service_group//service_group/<link>static
 ;
 
 alias source : [ glob src/*.cpp ] : ;
