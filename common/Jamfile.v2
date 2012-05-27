@@ -1,0 +1,11 @@
+project common :
+requirements <include>.  ;
+
+#import export-rule ;
+
+alias source : [ glob src/*.cpp src/*.c ] : ;
+
+#lib baseos : source :  <conditional>@export-rule.config-export ;
+
+lib common : source : ;
+

@@ -1,0 +1,17 @@
+project protocol :
+requirements <include>.  ;
+
+#import export-rule ;
+
+alias TLV_SRC : [ glob tlv/src/*.cpp ] ;
+alias HTTP_SRC : [ glob http/src/*.cpp ] ;
+
+alias source :
+TLV_SRC
+HTTP_SRC
+ : <link>static ;
+
+#lib baseos : source :  <conditional>@export-rule.config-export ;
+
+lib protocol : source : ;
+

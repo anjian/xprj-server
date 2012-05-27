@@ -1,0 +1,124 @@
+%{
+#include "w3c/inc/UcWebTagInfo.h"
+/*!!!!!! Important notes!!!!
+
+1. gperf  --struct-type --ignore-case  -N findAttribute -H getAttrHash AttributeList.input > AttributeListAUTO.h
+
+2. Please use below to replace the get method. It looks like      
+  if ((((unsigned char)*str ^ (unsigned char)*s) & ~32) == 0 && !gperf_case_strcmp (str, s))
+  Please replace it as below. 
+  if ((((UC_BYTE)*str ^ (UC_BYTE)*s) & ~32) == 0 
+			  && !WMLStrNICmp(str, s, len))
+3. Remove the gperf_case_strcmp code.
+
+4. Avoid the name conflict with the attributeListAUTO.h for 
+#define TOTAL_KEYWORDS 85
+#define MIN_WORD_LENGTH 1
+#define MAX_WORD_LENGTH 10
+#define MIN_HASH_VALUE 1
+#define MAX_HASH_VALUE 217
+
+Recommend to add a prefix to it
+
+*/
+%}
+struct Wap2Keyword {const UC_CHAR * name;UC_INT token;};
+%%
+rel,                                            WEB_ATTRIBUTE_TYPE_REL
+rows,                                           WEB_ATTRIBUTE_TYPE_ROWS
+rules,                                          WEB_ATTRIBUTE_TYPE_RULES
+src,                                            WEB_ATTRIBUTE_TYPE_SRC
+size,                                           WEB_ATTRIBUTE_TYPE_SIZE
+vspace,                                         WEB_ATTRIBUTE_TYPE_VSPACE
+rowspan,                                        WEB_ATTRIBUTE_TYPE_ROWSPAN
+selected,                                       WEB_ATTRIBUTE_TYPE_SELECTED
+path,                                           WEB_ATTRIBUTE_TYPE_PATH
+onpick,                                         WEB_ATTRIBUTE_TYPE_ONPICK
+alt,                                            WEB_ATTRIBUTE_TYPE_ALT
+accesskey,                                      WEB_ATTRIBUTE_TYPE_ACCESSKEY
+value,                                          WEB_ATTRIBUTE_TYPE_VALUE
+accept,                                         WEB_ATTRIBUTE_TYPE_ACCEPT
+rev,                                            WEB_ATTRIBUTE_TYPE_REV
+abbr,                                           WEB_ATTRIBUTE_TYPE_ABBR
+abbrs,                                          WEB_ATTRIBUTE_TYPE_ABBRS
+localsrc,                                       WEB_ATTRIBUTE_TYPE_LOCALSRC
+accept-charset,                                 WEB_ATTRIBUTE_TYPE_ACCEPT_CHARSET
+start,                                          WEB_ATTRIBUTE_TYPE_START
+disabled,                                       WEB_ATTRIBUTE_TYPE_DISABLED
+cols,                                           WEB_ATTRIBUTE_TYPE_COLS
+label,                                          WEB_ATTRIBUTE_TYPE_LABEL
+ontimer,                                        WEB_ATTRIBUTE_TYPE_ONTIMER
+noselect,                                       WEB_ATTRIBUTE_TYPE_NOSELECT
+onenterforward,                                 WEB_ATTRIBUTE_TYPE_ONENTERFORWARD
+onenterbackward,                                WEB_ATTRIBUTE_TYPE_ONENTERBACKWARD
+cellspacing,                                    WEB_ATTRIBUTE_TYPE_COLSPAN
+colspan,                                        WEB_ATTRIBUTE_TYPE_COLSPAN
+type,                                           WEB_ATTRIBUTE_TYPE_TYPE
+cellpadding,                                    WEB_ATTRIBUTE_TYPE_CELLPADDING
+summary,                                        WEB_ATTRIBUTE_TYPE_SUMMARY
+optional,                                       WEB_ATTRIBUTE_TYPE_OPTIONAL
+char,                                           WEB_ATTRIBUTE_TYPE_CHAR
+class,                                          WEB_ATTRIBUTE_TYPE_CLASS
+action,                                         WEB_ATTRIBUTE_TYPE_ACTION
+charset,                                        WEB_ATTRIBUTE_TYPE_CHARSET
+readonly,                                       WEB_ATTRIBUTE_TYPE_READONLY
+name,                                           WEB_ATTRIBUTE_TYPE_NAME
+scope,                                          WEB_ATTRIBUTE_TYPE_SCOPE
+columns,                                        WEB_ATTRIBUTE_TYPE_COLUMNS
+cache-control,                                  WEB_ATTRIBUTE_TYPE_CACHE_CONTROL
+maxlength,                                      WEB_ATTRIBUTE_TYPE_MAXLENGTH
+title,                                          WEB_ATTRIBUTE_TYPE_TITLE
+valign,                                         WEB_ATTRIBUTE_TYPE_VALIGN
+checked,                                        WEB_ATTRIBUTE_TYPE_CHECKED
+hspace,                                         WEB_ATTRIBUTE_TYPE_HSPACE
+axis,                                           WEB_ATTRIBUTE_TYPE_AXIS
+newcontext,                                     WEB_ATTRIBUTE_TYPE_NEWCONTEXT
+scheme,                                         WEB_ATTRIBUTE_TYPE_SCHEME
+href,                                           WEB_ATTRIBUTE_TYPE_HREF
+width,                                          WEB_ATTRIBUTE_TYPE_WIDTH
+method,                                         WEB_ATTRIBUTE_TYPE_METHOD
+id,                                             WEB_ATTRIBUTE_TYPE_ID
+hreflang,                                       WEB_ATTRIBUTE_TYPE_HREFLANG
+http-equiv,                                     WEB_ATTRIBUTE_TYPE_HTTP_EQUIV
+charoff,                                        WEB_ATTRIBUTE_TYPE_CHAROFF
+dir,                                            WEB_ATTRIBUTE_TYPE_DIR
+media,                                          WEB_ATTRIBUTE_TYPE_MEDIA
+border,                                         WEB_ATTRIBUTE_TYPE_BORDER
+content,                                        WEB_ATTRIBUTE_TYPE_CONTENT
+tabindex,                                       WEB_ATTRIBUTE_TYPE_TABLEINDEX
+frame,                                          WEB_ATTRIBUTE_TYPE_FRAME
+headers,                                        WEB_ATTRIBUTE_TYPE_HEADERS
+longdesc,                                       WEB_ATTRIBUTE_TYPE_LONGDESC
+domain,                                         WEB_ATTRIBUTE_TYPE_DOMAIN
+profile,                                        WEB_ATTRIBUTE_TYPE_PROFILE
+multiple,                                       WEB_ATTRIBUTE_TYPE_MULTIPLE
+xmlns,                                          WEB_ATTRIBUTE_TYPE_XMLNS
+xml:lang,                                       WEB_ATTRIBUTE_TYPE_XML_LANG
+xml:space,                                      WEB_ATTRIBUTE_TYPE_XML_SPACE
+align,                                          WEB_ATTRIBUTE_TYPE_ALIGN
+ordered,                                        WEB_ATTRIBUTE_TYPE_ORDERED
+iname,                                          WEB_ATTRIBUTE_TYPE_INAME
+enctype,                                        WEB_ATTRIBUTE_TYPE_ENCTYPE
+sendreferer,                                    WEB_ATTRIBUTE_TYPE_SENDREFERER
+emptyok,                                        WEB_ATTRIBUTE_TYPE_EMPTYOK
+style,                                          WEB_ATTRIBUTE_TYPE_STYLE
+target,                                         WEB_ATTRIBUTE_TYPE_TARGET
+for,                                            WEB_ATTRIBUTE_TYPE_FOR
+version,                                        WEB_ATTRIBUTE_TYPE_VERSION
+ivalue,                                         WEB_ATTRIBUTE_TYPE_IVALUE
+forua,                                          WEB_ATTRIBUTE_TYPE_FORUA
+format,                                         WEB_ATTRIBUTE_TYPE_FORMAT
+height,                                         WEB_ATTRIBUTE_TYPE_HEIGHT
+color,                                          WEB_ATTRIBUTE_TYPE_COLOR
+bgcolor,                                        WEB_ATTRIBUTE_TYPE_BGCOLOR
+backgroundcolor,                                WEB_ATTRIBUTE_TYPE_BGCOLOR
+background,                                     WEB_ATTRIBUTE_TYPE_BACKGROUND
+data,                                           WEB_ATTRIBUTE_TYPE_DATE
+link_type,                                      WEB_ATTRIBUTE_TYPE_LINK_TYPE
+icon_src,                                       WEB_ATTRIBUTE_TYPE_ICON_SRC
+seleted,                                        WEB_ATTRIBUTE_TYPE_SELETED
+accessory,                                      WEB_ATTRIBUTE_TYPE_ACCESSORY
+event_id,                                       WEB_ATTRIBUTE_TYPE_EVENT_ID
+sub_menu_id,                                    WEB_ATTRIBUTE_TYPE_SUB_MENU_ID
+sys_conf_id,                                    WEB_ATTRIBUTE_TYPE_SYS_CONF_ID
+img_src,                                        WEB_ATTRIBUTE_TYPE_IMG_SRC

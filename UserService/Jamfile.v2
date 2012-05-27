@@ -1,0 +1,19 @@
+
+alias my_library :
+../common//common/<link>static
+../baseos//baseos/<link>static
+../platform//platform/<link>static
+../system//system/<link>static
+../listener//listener/<link>static
+../protocol//protocol/<link>static
+../io//io/<link>static
+../data_proxy//data_proxy/<link>static
+../service_group//service_group/<link>static
+;
+
+alias source : [ glob src/*.cpp ] : ;
+
+exe UserService : my_library source :
+<linkflags>-lrt
+<linkflags>-lsqlite3
+;

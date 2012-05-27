@@ -1,0 +1,16 @@
+project io :
+requirements <include>.  ;
+
+#import export-rule ;
+
+alias IO_SRC : [ glob src/*.cpp ] ;
+#alias HTTP_SRC : [ glob http/src/*.cpp ] ;
+
+alias source :
+IO_SRC
+ : <link>static ;
+
+#lib baseos : source :  <conditional>@export-rule.config-export ;
+
+lib io : source : ;
+

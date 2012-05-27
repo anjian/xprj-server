@@ -1,0 +1,6 @@
+project : requirements <include>"." ;
+
+build-project dispatcher ;
+build-project UserService ;
+#build-project user_manager ;
+

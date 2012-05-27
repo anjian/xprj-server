@@ -1,0 +1,30 @@
+#ifndef __TLV_VALUE_DEFINE_H_
+#define __TLV_VALUE_DEFINE_H_
+
+enum TlvAttrCommandValue_e
+{
+    TLV_CMD_RESPONSE,
+    TLV_CMD_NEW_ACCOUNT,
+    TLV_CMD_CHECK_SERVICE_GROUP,
+    TLV_CMD_LOGIN,
+    TLV_CMD_KEEP_ALIVE,
+};
+
+enum TlvAttrUserStatus_e
+{
+    TLV_USER_STATUS_IDLE,
+    TLV_USER_STATUS_ONLINE,
+    TLV_USER_STATUS_AWAY,
+    TLV_USER_STATUS_BUSY,
+    TLV_USER_STATUS_HIDE,
+};
+
+enum TlvAttrChatType_e
+{
+    TLV_CHAT_TYPE_TEXT,
+    TLV_CHAT_TYPE_VOICE,
+    TLV_CHAT_TYPE_PICTURE,
+};
+
+
+#endif

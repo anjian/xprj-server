@@ -1,0 +1,27 @@
+create table userinfo (
+        id              INTEGER UNIQUE,
+        sgid            INTEGER,                        -- service group id
+        );
+
+create table useraccount (
+        id              INTEGER,                        -- foreign key
+        account         varchar(40),
+        type            integer                         -- 0: internal, 1: fb, 2: phone NO. 3: ...
+        );
+
+create table sginfo (
+        id              INTEGER UNIQUE,                        
+        host            varchar(20),
+        port            varchar(20),
+        type            integer                         -- 0: ipv4 : 1: ipv6
+        );
+
+
+--insert into people (id, firstname, lastname, phonenumber) values
+--(1, 'Fred', 'Flintstone', '5055551234');
+
+--insert into people (id, firstname, lastname, phonenumber) values
+--(2, 'Wilma', 'Flintstone', '5055551234');
+
+--insert into people (id, firstname, lastname, phonenumber) values
+--(3, 'Barny', 'Rubble', '5055554321');

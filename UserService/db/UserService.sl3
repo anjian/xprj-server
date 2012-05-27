@@ -1,0 +1,72 @@
+create table userinfo (
+        id              INTEGER UNIQUE,
+        sgid            INTEGER,                        -- service group id
+        password        varchar(50),                    -- to be encoded
+        screenname      varchar(40),
+        pic             blob,
+        level           integer
+        );
+
+create table userdetail (
+        id              INTEGER,                        -- foreign key
+        fname           varchar(20),
+        lname           varchar(20),
+        phone           char(20),
+        mobile          char(20),
+        gender          integer,                        -- 0: unknown, 1: female, 2: male
+        birthyear       integer,
+        birthmonth      integer,
+        birthday        integer,
+        country         varchar(20),
+        province        varchar(20),
+        city            varchar(20),
+        zip             varchar(10),
+        mail            varchar(30),
+        job             varchar(30),
+        website         varchar(30),
+        interestedin    integer,
+        createdate      integer,
+        activedate      integer                         -- how many days user login at least one time
+        );
+
+create table userbulltin (
+        userid          INTEGER,                        -- foreign key
+        type            INTEGER,                        -- 0: post, 1: signature
+        date            integer,                        -- post date
+        posttype        integer,                        -- post type: text, picture
+        post            blob
+        );
+
+create table buddygroup (
+        userid          INTEGER,                        -- foreign key
+        groupid         INTEGER,
+        date            integer,
+        screenname      varchar(140)
+        );
+
+create table buddyinfo (
+        buddyid         INTEGER,
+        userid          INTEGER,
+        buddygroupid    INTEGER,
+        sgid            INTEGER,                        -- user service group id
+        FOREIGN KEY(userid) REFERENCES userinfo(id)
+        );
+
+create table chatcache (
+        userid          INTEGER,
+        from            INTEGER,
+        to              INTEGER,
+        time            INTEGER,
+        read            INTEGER,                        -- 0: not readed, 1: readed
+        chatType        INTEGER,
+        content         BLOB
+        );
+
+--insert into people (id, firstname, lastname, phonenumber) values
+--(1, 'Fred', 'Flintstone', '5055551234');
+
+--insert into people (id, firstname, lastname, phonenumber) values
+--(2, 'Wilma', 'Flintstone', '5055551234');
+
+--insert into people (id, firstname, lastname, phonenumber) values
+--(3, 'Barny', 'Rubble', '5055554321');

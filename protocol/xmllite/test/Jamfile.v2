@@ -1,0 +1,30 @@
+project test
+:
+
+requirements <include>../../../
+;
+
+alias READFILE_SRC : ../../../stubs/src/ReadFileBytes.cpp ;
+alias STUB_SRC : [ glob ../../../stubs/src/uc_memory_stub.cpp ../../stub/src/UcTransientMemory_stub.cpp ] ;
+alias COM_SRC : ../../../com/src/UcLib.cpp ../../../com/src/uc_ctype.c ;
+alias XMLLITE_SRC : ../src/UcXmlParserWapper.cpp ../src/WMLSaxParser.c ;
+alias TEST_SRC : [ glob src/*.cpp ] ;
+alias WEBTAG_SRC : ../../../protocol/w3c/src/UcWebTagInfo.cpp ;
+
+lib cpp_unit :  : <name>cppunitd <search>../../../third_party/cppunit/lib/windows
+;
+
+alias source :
+READFILE_SRC
+STUB_SRC
+COM_SRC
+XMLLITE_SRC
+TEST_SRC
+WEBTAG_SRC
+;
+
+exe test : source cpp_unit ../../../third_party/cppunit/fm//fm : <virtual-machine>qt <define>MEM_DBG
+;
+
+install build : test : <location>build
+;

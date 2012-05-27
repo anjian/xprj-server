@@ -1,0 +1,11 @@
+project platform :
+requirements <include>.  ;
+
+#import export-rule ;
+
+alias source : [ glob src/*.cpp ] : <link>static ;
+
+#lib baseos : source :  <conditional>@export-rule.config-export ;
+
+lib platform : source : ;
+

@@ -1,0 +1,892 @@
+#include <com/inc/UcDebug.h>
+#include <com/inc/UcStdLibrary.h>
+#include <com/inc/UcStringHelper.h>
+
+#include <interface/baseos/UcTransientMemory.h>
+#include <interface/system/UcSystemInfoIf.h>
+#include <interface/protocol/UcUri.h> 
+
+#include "protocol/http/inc/UcHttpHeader.h"
+#include "protocol/http/inc/UcHttpRequest.h"
+#include "protocol/http/inc/UcExtQueryAnalyzer.h"
+
+// #include <protocol/http/inc/UcCookieMgrProcess.h>
+
+//char sUcweb_m[]             = "ucweb-squid";
+char sVersion_m[]           = "8.0";
+char sCustomUserAgent_m[]   = "BREW-Applet/0x20068888 (BREW/3.1.5.20; DeviceId: 600; Lang: zhcn) ucweb-squid";           // for test
+
+//char sCustomUserAgent_m[]   = "Opera/9.80 (Windows NT 5.1; U; zh-cn) Presto/2.7.62 Version/11.01 ";           // for test
+////////////////////////////////////////////////////////////////////////////////
+// The pHttpReqMethod_m MUST be exactly mapping to the Method type definition:
+//
+//  UcHttpRequestMethod_e in header file
+////////////////////////////////////////////////////////////////////////////////
+const HttpRequestMethodInfo_t pHttpReqMethod_m[] =
+{
+    {HTTP_REQ_METHOD_GET,    "GET"},
+    {HTTP_REQ_METHOD_HEADER, "HEADER"},
+    {HTTP_REQ_METHOD_POST,   "POST"},
+    {HTTP_REQ_METHOD_END,    ""},
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// The pHttpReqHandler_m MUST be exactly mapping to the step type definition:
+//
+//  UcHttpRequestStep_e in header file
+////////////////////////////////////////////////////////////////////////////////
+UcHttpRequest_c::UcHttpRequestHandlerTable_t UcHttpRequest_c::pHttpReqHandler_m[] =
+{
+    {
+        //HTTP_REQUEST_STEP_REQUEST_LINE,
+        &UcHttpRequest_c::getRequestLineEstimateSize,
+        &UcHttpRequest_c::requestLineHandler
+    },
+    {
+        //HTTP_REQUEST_STEP_HOST,
+        &UcHttpRequest_c::getHostEstimateSize,
+        &UcHttpRequest_c::hostHandler
+    },
+    {
+        //HTTP_REQUEST_STEP_CONNECTION,
+        &UcHttpRequest_c::getConnectionSize,
+        &UcHttpRequest_c::connectionHandler
+    },
+    {
+        //HTTP_REQUEST_STEP_ACCEPT_CHARSET,
+        &UcHttpRequest_c::getAcceptCharsetSize,
+        &UcHttpRequest_c::acceptCharsetHandler
+    },
+    {
+        //HTTP_REQUEST_STEP_ACCEPT_ENCODING,
+        &UcHttpRequest_c::getAcceptEncodingSize,
+        &UcHttpRequest_c::acceptEncodingHandler
+    },
+    {
+        //HTTP_REQUEST_STEP_ACCEPT_LANGUAGE,
+        &UcHttpRequest_c::getAcceptLanguageSize,
+        &UcHttpRequest_c::acceptLanguageHandler
+    },
+    {
+        //HTTP_REQUEST_STEP_USER_AGENT,
+        &UcHttpRequest_c::getUserAgentEstimateSize,
+        &UcHttpRequest_c::userAgentHandler
+    },
+    {
+        //HTTP_REQUEST_STEP_RANGE,
+        &UcHttpRequest_c::getRangeEstimateSize,
+        &UcHttpRequest_c::rangeHandler
+    },
+    {
+        //HTTP_REQUEST_STEP_CONTENT_TYPE,
+        &UcHttpRequest_c::getContentTypeEstimateSize,
+        &UcHttpRequest_c::contentTypeHandler
+    },
+    {
+        //HTTP_REQUEST_STEP_REFERER,
+        &UcHttpRequest_c::getRefererEstimateSize,
+        &UcHttpRequest_c::refererHandler
+    },
+    {  
+        //HTTP_REQUEST_STEP_ACCEPT,
+        &UcHttpRequest_c::getAcceptSize,
+        &UcHttpRequest_c::acceptHandler
+    },
+    {  
+        //HTTP_REQUEST_STEP_CONTENT_LENGTH,
+        &UcHttpRequest_c::getContentLengthSize,
+        &UcHttpRequest_c::contentLengthHandler
+    },
+    {  
+        //HTTP_REQUEST_STEP_COOKIE,
+        &UcHttpRequest_c::getCookieSize,
+        &UcHttpRequest_c::cookieHandler
+    },
+    {
+        //HTTP_REQUEST_STEP_EMPTY_LINE,
+        &UcHttpRequest_c::getEmptyLineSize,
+        &UcHttpRequest_c::emptyLineHandler
+    },
+    {
+        //HTTP_REQUEST_STEP_END,
+        NULL,
+        NULL
+    },
+};
+
+
+UcHttpRequest_c::UcHttpRequest_c(UcUri_c* uri) :
+    eCurStep_m(HTTP_REQUEST_STEP_START),
+    pUri_m(uri),
+    pRefererUri_m(NULL),
+    nFirstBytePos_m(0),
+    nLastBytePos_m(0),
+    nContentLength_m(0),
+    nReqMethod_m(HTTP_REQ_METHOD_GET),
+    bUseProxy_m(HTTP_REQ_FLAG_NOT_SET),
+    bRangeSet_m(HTTP_REQ_FLAG_NOT_SET),
+    nContentType_m(HTTP_REQ_CONTENT_TYPE_NORMAL),
+    nAcceptType_m(HTTP_REQ_ACCEPT_NORMAL),
+    bCookieEnabled_m(UC_TRUE),
+    sCookieData_m(NULL)
+{
+}
+
+UcHttpRequest_c::UcHttpRequest_c() :
+    eCurStep_m(HTTP_REQUEST_STEP_START),
+    pUri_m(NULL),
+    pRefererUri_m(NULL),
+    nFirstBytePos_m(0),
+    nLastBytePos_m(0),
+    nContentLength_m(0),
+    nReqMethod_m(HTTP_REQ_METHOD_GET),
+    bUseProxy_m(HTTP_REQ_FLAG_NOT_SET),
+    bRangeSet_m(HTTP_REQ_FLAG_NOT_SET),
+    nContentType_m(HTTP_REQ_CONTENT_TYPE_NORMAL),
+    nAcceptType_m(HTTP_REQ_ACCEPT_NORMAL),
+    bCookieEnabled_m(UC_TRUE),
+    sCookieData_m(NULL)
+{
+}
+
+UcHttpRequest_c::~UcHttpRequest_c()
+{
+    if (sCookieData_m) 
+   {
+       ucfree(sCookieData_m);
+   }
+}
+
+void UcHttpRequest_c::reset()
+{
+    eCurStep_m  = HTTP_REQUEST_STEP_START;
+}
+
+void UcHttpRequest_c::setUri(UcUri_c* uri)
+{
+    eCurStep_m  = HTTP_REQUEST_STEP_START;
+    pUri_m      = uri;
+}
+
+UcOutputStreamRetCode_e UcHttpRequest_c::generate(UC_CHAR* sBuf, const UC_INT32 nBufLen, UC_INT32& nContentLen)
+{
+    if (NULL == pUri_m)
+    {
+        return OUTPUT_GEN_COMPLETE;
+    }
+
+    while ((HTTP_REQUEST_STEP_START <= eCurStep_m) && (eCurStep_m < HTTP_REQUEST_STEP_END))
+    {
+        switch (stepHandlerFrame(sBuf, nBufLen, nContentLen))
+        {
+            case HTTP_REQ_ITEM_STATUS_DONE:
+                {
+                    break;
+                }
+            case HTTP_REQ_ITEM_STATUS_COMPLETE:
+                {
+                    return OUTPUT_GEN_COMPLETE;
+                }
+            case HTTP_REQ_ITEM_STATUS_BUF_NOT_ENOUGH:
+                {
+                    // left buffer is not big enough, inform consumer to handle part of content first
+                    return OUTPUT_GEN_CONTINUE;
+                }
+            case HTTP_REQ_ITEM_STATUS_BUF_TOO_SHORT:
+                {
+                    // ask consumer to give a bigger memory block
+                    return OUTPUT_GEN_BUF_NOT_ENOUGH;
+                }
+            default:
+                {
+                    // it's impossible unless a error case
+                    return OUTPUT_GEN_COMPLETE;
+                }
+        }
+    }
+
+    return OUTPUT_GEN_COMPLETE;
+}
+
+UcHttpRequestItemStatus_e UcHttpRequest_c::stepHandlerFrame(char* sBuf, const int nBufLen, int& nContentLen)
+{
+    if (NULL == pUri_m)
+    {
+        return HTTP_REQ_ITEM_STATUS_COMPLETE;
+    }
+
+    //
+    // 0. get estimate size
+    int nEstimateSize = (this->*(pHttpReqHandler_m[eCurStep_m].getEstimateSize))();
+
+    // 1. check buffer size
+    if (nEstimateSize > nBufLen)
+    {
+        return HTTP_REQ_ITEM_STATUS_BUF_TOO_SHORT;
+    }
+    else if (nEstimateSize > (nBufLen - nContentLen))
+    {
+        return HTTP_REQ_ITEM_STATUS_BUF_NOT_ENOUGH;
+    }
+    else if (0 == nEstimateSize)
+    {
+        // skip empty item
+        stepCompleted();
+        return HTTP_REQ_ITEM_STATUS_DONE;
+    }
+
+    // 2. allocate transient memory
+    char* pTrRequestLine = (char*)UC_TR_MEMORY_ALLOC(nEstimateSize);
+    if (NULL == pTrRequestLine)
+    {
+        // TODO: memory error handling
+        return HTTP_REQ_ITEM_STATUS_DONE;
+    }
+
+    // 3. organize request line
+    (this->*(pHttpReqHandler_m[eCurStep_m].stepHandler))(pTrRequestLine);
+
+    // 4. append request line
+    appendBuffer(sBuf, pTrRequestLine, nBufLen, nContentLen);
+
+    // 5. release transient memory
+    UC_TR_MEMORY_FREE(pTrRequestLine);
+
+    // done
+    stepCompleted();
+    return HTTP_REQ_ITEM_STATUS_DONE;
+}
+
+void UcHttpRequest_c::appendBuffer(char* sBuf, char* sPart, const int nBufLen, int& nContentLen)
+{
+    int nPartLen = uc_strlen(sPart);
+
+    // don't need end zero
+    uc_memcpy(sBuf + nContentLen, sPart, nPartLen);
+    nContentLen += nPartLen;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// NOTE: internal function, pUri_m MUST be checked before calling it
+////////////////////////////////////////////////////////////////////////////////
+void UcHttpRequest_c::assembleHost(char* sBuf, UcUri_c* pUri, bool bWithScheme)
+{
+    if (true == bWithScheme)
+    {
+        if (NULL != pUri->getScheme())
+        {
+            uc_strcat(sBuf, pUri->getScheme());
+            uc_strcat(sBuf, "://");
+        }
+    }
+
+    if (NULL != pUri->getHost())
+    {
+        uc_strcat(sBuf, pUri->getHost());
+    }
+
+    if (NULL != pUri->getPort())
+    {
+        uc_strcat(sBuf, ":");
+        uc_strcat(sBuf, pUri->getPort());
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// HTTP Request Header info
+////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+// RFC2616 Chapter 5.1.2 (extracted)
+//
+// The four options for Request-URI are dependent on the nature of the request.
+//
+// 1) [NOT SUPPORT] The asterisk â€?â€?means that the request does not apply to a
+//    particular resource, but to the server itself
+// 2) [NOT SUPPORT] authority only:
+//    only used by the CONNECT method
+// 3) absloute_uri:
+//    The absoluteURI form is REQUIRED when the request is being made to a proxy
+// 4) absolute_path:
+//    the absolute path of the URI MUST be transmitted (see section 3.2.1, abs_path)
+//    as the Request-URI, and the network location of the URI (authority) MUST be
+//    transmitted in a Host header field
+////////////////////////////////////////////////////////////////////////////////
+int UcHttpRequest_c::getRequestLineEstimateSize()
+{
+    int nESize = 0;
+    if (NULL == pUri_m)
+    {
+        return nESize;
+    }
+
+    // 1. METHOD & VERSION: a little more...
+    nESize += 32;
+
+    // 2. URI length
+    if (HTTP_REQ_FLAG_NOT_SET == bUseProxy_m)
+    {
+        nESize += pUri_m->getPathLen();
+        nESize += pUri_m->getQueryLen();
+    }
+    else
+    {
+        nESize += pUri_m->getUriLen();
+    }
+
+    //add ext queryAnalyzer
+    UcExtQueryAnalyzer_c pQAnalyzer;// = new UcExtQueryAnalyzer_c();
+    //nESize -= pUri_m->getQueryLen();
+    nESize += pQAnalyzer.getUcParamSize(pUri_m->getHost(), pUri_m->getQuery());
+
+    return nESize;
+}
+
+void UcHttpRequest_c::requestLineHandler(char* sBuf)
+{
+    // assemble request line
+    //
+    // 0) init
+    *sBuf = 0;
+
+    // 1) METHOD
+    uc_strcpy(sBuf, pHttpReqMethod_m[nReqMethod_m].sMethod_m);
+    uc_strcat(sBuf, UC_HTTP_SPACE);
+
+    // 2) uri
+    if (HTTP_REQ_FLAG_NOT_SET == bUseProxy_m)
+    {
+        // concat absolute path
+        if (NULL != pUri_m->getPath())
+        {
+            uc_strcat(sBuf, pUri_m->getPath());
+        }
+
+        if (NULL != pUri_m->getQuery())
+        {
+            uc_strcat(sBuf, "?");
+            //uc_strcat(sBuf, pUri_m->getQuery());
+            UcExtQueryAnalyzer_c pQAnalyzer;
+            uc_strcat(sBuf, pQAnalyzer.getUcParamStr(pUri_m->getHost(), pUri_m->getQuery()));
+        }
+
+        // if neither path nor query is set, use root as path
+        if ((NULL == pUri_m->getPath()) && (NULL == pUri_m->getQuery()))
+        {
+            uc_strcat(sBuf, "/");
+        }
+    }
+    else
+    {
+        //TODO: concat absolute uri
+    }
+
+    // 3 VERSION
+    uc_strcat(sBuf, UC_HTTP_SPACE);
+    uc_strcat(sBuf, UC_HTTP_PROTOCOL);
+    uc_strcat(sBuf, "/");
+    uc_strcat(sBuf, UC_HTTP_PROTOCOL_VERSION);
+
+    // 4 EOL
+    uc_strcat(sBuf, UC_HTTP_END_OF_LINE);
+
+    return;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// host info
+////////////////////////////////////////////////////////////////////////////////
+int UcHttpRequest_c::getHostEstimateSize()
+{
+    // "Host: ", "/r/n" & ':' between host&port
+    return pUri_m->getHostLen() + pUri_m->getPortLen() + 12;
+}
+
+void UcHttpRequest_c::hostHandler(char* sBuf)
+{
+    // host info
+    *sBuf = 0;
+
+    uc_strcpy(sBuf, STR_DEF_HTTP_HEADER_HOST);
+    uc_strcat(sBuf, ":");
+    uc_strcat(sBuf, UC_HTTP_SPACE);
+
+    assembleHost(sBuf, pUri_m, false);
+
+    uc_strcat(sBuf, UC_HTTP_END_OF_LINE);
+
+    return;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Connection info
+//
+// RFC2616 chapter 8.1.2:
+// persistent connections are the default behavior of any HTTP connection. That
+// is, unless otherwise indicated, the client SHOULD assume that the server will
+// maintain a persistent connection, even after error responses from the server
+////////////////////////////////////////////////////////////////////////////////
+int UcHttpRequest_c::getConnectionSize()
+{
+    UC_INT32 nUcHttpPersistentConnectionEnabled = UC_SYS_INFO_GET_INT(SYS_INFO_TYPE_PERSISTENT_CONNECTION);
+
+    // "Connection: close" if presistent connection is not enabled
+    if (UC_TRUE == nUcHttpPersistentConnectionEnabled)
+    {
+        return 0;
+    }
+
+    return uc_strlen(STR_DEF_HTTP_HEADER_CONNECTION) + uc_strlen(UC_HTTP_CONNECTION_CLOSE) + 6;
+}
+
+void UcHttpRequest_c::connectionHandler(char* sBuf)
+{
+    // connection
+    *sBuf = 0;
+
+    UC_INT32 nUcHttpPersistentConnectionEnabled = UC_SYS_INFO_GET_INT(SYS_INFO_TYPE_PERSISTENT_CONNECTION);
+    if (UC_FALSE == nUcHttpPersistentConnectionEnabled)
+    {
+        uc_strcpy(sBuf, STR_DEF_HTTP_HEADER_CONNECTION);
+        uc_strcat(sBuf, ":");
+        uc_strcat(sBuf, UC_HTTP_SPACE);
+        uc_strcat(sBuf, UC_HTTP_CONNECTION_CLOSE);
+        uc_strcat(sBuf, UC_HTTP_END_OF_LINE);
+    }
+
+    return;
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Accept-charset
+////////////////////////////////////////////////////////////////////////////////
+int UcHttpRequest_c::getAcceptCharsetSize()
+{
+    return uc_strlen(STR_DEF_HTTP_HEADER_ACCEPT_CHARSET) + uc_strlen(UC_HTTP_ACCEPT_CHARSET_VALUE) + 6;
+}
+
+void UcHttpRequest_c::acceptCharsetHandler(char* sBuf)
+{
+    // Accept-Charset: utf-8,*;q=0.8\r\n
+    *sBuf = 0;
+
+    uc_sprintf(sBuf, "%s: %s\r\n", STR_DEF_HTTP_HEADER_ACCEPT_CHARSET, UC_HTTP_ACCEPT_CHARSET_VALUE);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Accept-Encoding
+////////////////////////////////////////////////////////////////////////////////
+int UcHttpRequest_c::getAcceptEncodingSize()
+{
+    //return 0;     // disable accept encoding
+    return uc_strlen(STR_DEF_HTTP_HEADER_ACCEPT_ENCODING) + uc_strlen(UC_HTTP_ACCEPT_ENCODING_VALUE) + 6;
+}
+
+void UcHttpRequest_c::acceptEncodingHandler(char* sBuf)
+{
+    // Accept-Encoding: gzip\r\n
+    *sBuf = 0;
+
+    uc_sprintf(sBuf, "%s: %s\r\n", STR_DEF_HTTP_HEADER_ACCEPT_ENCODING, UC_HTTP_ACCEPT_ENCODING_VALUE);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Accept-Language
+////////////////////////////////////////////////////////////////////////////////
+int UcHttpRequest_c::getAcceptLanguageSize()
+{
+   return uc_strlen(STR_DEF_HTTP_HEADER_ACCEPT_LANGUAGE) + uc_strlen(UC_HTTP_ACCEPT_LANGUAGE_VALUE) + 6;
+}
+
+void UcHttpRequest_c::acceptLanguageHandler(char* sBuf)
+{
+    *sBuf = 0;
+    uc_sprintf(sBuf, "%s: %s\r\n", STR_DEF_HTTP_HEADER_ACCEPT_LANGUAGE, UC_HTTP_ACCEPT_LANGUAGE_VALUE);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Accept
+////////////////////////////////////////////////////////////////////////////////
+int UcHttpRequest_c::getAcceptSize()
+{
+    int len = uc_strlen(STR_DEF_HTTP_HEADER_ACCEPT) + 6;
+
+    switch(nAcceptType_m)
+    {
+        case HTTP_REQ_ACCEPT_DOWNLOAD:
+            len += uc_strlen(UC_HTTP_ACCEPT_VALUE_DOWNLOAD);
+            break;
+
+        case HTTP_REQ_ACCEPT_NORMAL:
+        default:
+            len += uc_strlen(UC_HTTP_ACCEPT_VALUE_NORMAL);
+            break;
+    };
+
+    return len;
+}
+
+void UcHttpRequest_c::acceptHandler(char* sBuf)
+{
+    *sBuf = 0;
+
+    switch(nAcceptType_m)
+    {
+        case HTTP_REQ_ACCEPT_DOWNLOAD:
+            uc_sprintf(sBuf, "%s: %s\r\n", STR_DEF_HTTP_HEADER_ACCEPT, UC_HTTP_ACCEPT_VALUE_DOWNLOAD);
+            break;
+
+        case HTTP_REQ_ACCEPT_NORMAL:
+        default:
+            uc_sprintf(sBuf, "%s: %s\r\n", STR_DEF_HTTP_HEADER_ACCEPT, UC_HTTP_ACCEPT_VALUE_NORMAL);
+            break;
+    };
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// User-Agent
+////////////////////////////////////////////////////////////////////////////////
+int UcHttpRequest_c::getUserAgentEstimateSize()
+{
+    const UC_CHAR* sUserAgent = UC_SYS_INFO_GET_STRING(SYS_INFO_TYPE_USER_AGENT);
+    if (NULL == sUserAgent)
+    {
+        sUserAgent = sCustomUserAgent_m;
+    }
+
+    return uc_strlen(STR_DEF_HTTP_HEADER_USER_AGENT)
+        + uc_strlen(sUserAgent)
+        //+ uc_strlen(sUcweb_m)
+       // + uc_strlen(sVersion_m)
+        //+ 8;        // for ':', ' ', "/r/n"
+        + 6;        // for ':', ' ', "/r/n"
+}
+
+void UcHttpRequest_c::userAgentHandler(char* sBuf)
+{
+    const UC_CHAR* sUserAgent = UC_SYS_INFO_GET_STRING(SYS_INFO_TYPE_USER_AGENT);
+    if (NULL == sUserAgent)
+    {
+        sUserAgent = sCustomUserAgent_m;
+    }
+
+    // User-Agent
+    *sBuf = 0;
+
+    uc_sprintf(sBuf, "%s: %s\r\n", STR_DEF_HTTP_HEADER_USER_AGENT, sUserAgent);
+
+    //uc_strcpy(sBuf, STR_DEF_HTTP_HEADER_USER_AGENT);
+    //uc_strcat(sBuf, ":");
+    //uc_strcat(sBuf, UC_HTTP_SPACE);
+
+    //// if uc_strlen(sCustomUserAgent_m) > 0
+    //if (0 != sUserAgent[0])
+    //{
+    //    uc_strcat(sBuf, sUserAgent);
+    //    uc_strcat(sBuf, UC_HTTP_SPACE);
+    //}
+
+    //// product/version
+    ////uc_strcat(sBuf, sUcweb_m);
+    ////uc_strcat(sBuf, "/");
+    ////uc_strcat(sBuf, sVersion_m);
+
+    //// end of line
+    //uc_strcat(sBuf, UC_HTTP_END_OF_LINE);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Range
+//
+// NOTE: Do not support the range beyond 4G
+////////////////////////////////////////////////////////////////////////////////
+int UcHttpRequest_c::getRangeEstimateSize()
+{
+    UC_INT32 len = 0;
+
+    // should bigger enough even for 64 bits integer
+    if(HTTP_REQ_FLAG_SET == bRangeSet_m)
+    {
+        len += uc_strlen(STR_DEF_HTTP_HEADER_RANGE)
+            + 6 // "bytes="
+            + 2 // ": "
+            + 64;
+    }
+
+    return len;
+}
+
+void UcHttpRequest_c::rangeHandler(char* sBuf)
+{
+    *sBuf = 0;
+
+    if (HTTP_REQ_FLAG_SET == bRangeSet_m)
+    {
+        uc_sprintf(sBuf, "%s: bytes=%u-%u\r\n",
+                STR_DEF_HTTP_HEADER_RANGE,
+                nFirstBytePos_m,
+                nLastBytePos_m);
+
+        // reset range flag
+        bRangeSet_m = HTTP_REQ_FLAG_NOT_SET;
+    }
+}
+
+void UcHttpRequest_c::setRange(UC_INT32 nFPos, UC_INT32 nLPos)
+{
+    bRangeSet_m     = HTTP_REQ_FLAG_SET;
+
+    nFirstBytePos_m = nFPos;
+    nLastBytePos_m  = nLPos;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Content-Type
+////////////////////////////////////////////////////////////////////////////////
+int UcHttpRequest_c::getContentTypeEstimateSize()
+{
+    if (HTTP_REQ_METHOD_POST != nReqMethod_m)
+    {
+        return 0;
+    }
+
+    UC_INT32 nLen = 0;
+
+    switch (nContentType_m)
+    {
+        case HTTP_REQ_CONTENT_TYPE_NORMAL:
+            nLen = uc_strlen(STR_DEF_HTTP_HEADER_CONTENT_TYPE) + uc_strlen(UC_HTTP_CONTENT_TYPE_NORMAL_VALUE) + 6; 
+            break;
+        case HTTP_REQ_CONTENT_TYPE_URL_ENCODED:
+            nLen = uc_strlen(STR_DEF_HTTP_HEADER_CONTENT_TYPE) + uc_strlen(UC_HTTP_CONTENT_TYPE_URL_ENCODED) + 6; 
+            break;
+        case HTTP_REQ_CONTENT_TYPE_MULTI_PART:
+            nLen = uc_strlen(STR_DEF_HTTP_HEADER_CONTENT_TYPE)
+                + uc_strlen(UC_HTTP_CONTENT_TYPE_MULTI_PART_VALUE)
+                + uc_strlen(UC_HTTP_CONTENT_TYPE_ATTR_BOUNDARY)
+                + uc_strlen(UC_HTTP_CONTENT_TYPE_MULTI_PART_BOUNDARY)
+                + 10; 
+            break;
+        default:;
+    }
+
+    return nLen;
+}
+
+void UcHttpRequest_c::contentTypeHandler(char* sBuf)
+{
+    // init
+    *sBuf = 0;
+
+    if (HTTP_REQ_METHOD_POST != nReqMethod_m)
+    {
+        return;
+    }
+
+    switch (nContentType_m)
+    {
+        case HTTP_REQ_CONTENT_TYPE_NORMAL:
+            uc_sprintf(sBuf, "%s: %s\r\n", STR_DEF_HTTP_HEADER_CONTENT_TYPE, UC_HTTP_CONTENT_TYPE_NORMAL_VALUE);
+            break;
+        case HTTP_REQ_CONTENT_TYPE_URL_ENCODED:
+            uc_sprintf(sBuf, "%s: %s\r\n", STR_DEF_HTTP_HEADER_CONTENT_TYPE, UC_HTTP_CONTENT_TYPE_URL_ENCODED);
+            break;
+        case HTTP_REQ_CONTENT_TYPE_MULTI_PART:
+            uc_sprintf(sBuf, "%s: %s; %s=%s\r\n",
+                    STR_DEF_HTTP_HEADER_CONTENT_TYPE,
+                    UC_HTTP_CONTENT_TYPE_MULTI_PART_VALUE,
+                    UC_HTTP_CONTENT_TYPE_ATTR_BOUNDARY,
+                    UC_HTTP_CONTENT_TYPE_MULTI_PART_BOUNDARY);
+            break;
+        default:;
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Referer
+//
+// RFC2616 Chapter 14.36
+//  .) Mainly it's for server benefit...
+//  .) The Referer field MUST NOT be sent if the Request-URI was obtained from a
+//     source that does not have its own URI, such as input from the user keyboard
+//
+//     (Controlled by outside? or check uri to see whether it has a base uri?)
+////////////////////////////////////////////////////////////////////////////////
+int UcHttpRequest_c::getRefererEstimateSize()
+{
+    int nLen = 0;
+
+    //switch (nRefererType_m)
+    //{
+    //    case HTTP_REQ_REFERER_PATH:
+    //        // path part
+    //        nLen = pUri_m->getPathLen() + 6;
+
+    //        // !!!NO break, skip to plus authority length
+    //    case HTTP_REQ_REFERER_HOST:
+    //        nLen += pUri_m->getSchemeLen()
+    //            + pUri_m->getHostLen()
+    //            + pUri_m->getPortLen()
+    //            + 6;
+    //        break;
+    //    default:;
+    //}
+
+    if(NULL != pRefererUri_m)
+    {
+        nLen += uc_strlen(STR_DEF_HTTP_HEADER_REFERER)
+            + pRefererUri_m->getSchemeLen()
+            + pRefererUri_m->getHostLen()
+            + pRefererUri_m->getPortLen()
+            + pRefererUri_m->getPathLen()
+            + pRefererUri_m->getQueryLen()
+            + pRefererUri_m->getFragmentLen()
+            + 9 //"/r/n", ":", ": ", "?", "#"
+            + 1;
+    }
+
+    return nLen;
+}
+
+void UcHttpRequest_c::refererHandler(char* sBuf)
+{
+    *sBuf = 0;
+
+    UC_CHAR* pUri = pRefererUri_m->generateUri(UC_TRUE);
+    if (pUri)
+    {
+        // append header.
+        uc_sprintf(sBuf, "%s: %s\r\n", STR_DEF_HTTP_HEADER_REFERER, pUri);
+    }
+
+    SAFE_DELETE_TR_PTR(pUri);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Content-Length
+////////////////////////////////////////////////////////////////////////////////
+int UcHttpRequest_c::getContentLengthSize()
+{
+  return (nContentLength_m > 0) ? uc_strlen(STR_DEF_HTTP_HEADER_CONTENT_LENGTH) + 12 : 0;
+}
+
+void UcHttpRequest_c::contentLengthHandler(char* sBuf)
+{
+    *sBuf = 0;
+    if (nContentLength_m > 0)
+    {
+        // append header
+        uc_sprintf(sBuf, "%s: %d\r\n", STR_DEF_HTTP_HEADER_CONTENT_LENGTH,nContentLength_m);
+        //bContentLengthNeeded_m = HTTP_REQ_FLAG_NOT_SET;
+    }
+
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Cookie
+////////////////////////////////////////////////////////////////////////////////
+int UcHttpRequest_c::getCookieSize()
+{
+    if (!bCookieEnabled_m || NULL == sCookieData_m)
+    {
+        return 0;
+    }
+
+    return (uc_strlen(sCookieData_m) + uc_strlen(STR_DEF_HTTP_HEADER_COOKIE) + 6);
+}
+
+void UcHttpRequest_c::cookieHandler(char* sBuf)
+{
+    if (!bCookieEnabled_m || NULL == sCookieData_m)
+    {
+        return;
+    }
+
+    *sBuf = 0;
+
+    uc_sprintf(sBuf, "%s: %s\r\n", STR_DEF_HTTP_HEADER_COOKIE, sCookieData_m);
+
+    ucfree(sCookieData_m);
+    sCookieData_m = NULL;
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+// empty line '\r\n'
+////////////////////////////////////////////////////////////////////////////////
+int UcHttpRequest_c::getEmptyLineSize()
+{
+    // "/r/n"
+    return sizeof(UC_HTTP_END_OF_LINE) + 1;
+}
+
+void UcHttpRequest_c::emptyLineHandler(char* sBuf)
+{
+    *sBuf = 0;
+    uc_strcpy(sBuf, UC_HTTP_END_OF_LINE);
+
+    return;
+}
+
+void UcHttpRequest_c::setCookies(const UC_CHAR*  sCookieData)
+{
+    if (NULL == sCookieData)
+    {
+        return;
+    }
+
+    bCookieEnabled_m = UC_TRUE;
+
+    sCookieData_m = UcStringDuplicate(sCookieData, uc_strlen(sCookieData) + 1);
+}
+
+
+#if 0
+////////////////////////////////////////////////////////////////////////////////
+// test
+////////////////////////////////////////////////////////////////////////////////
+
+int main (int argc, char* argv[])
+{
+    //UcTransientMemoryPool_c* pTrPool = UcTransientMemoryPool_c::getInstance();
+
+    MSG("\nHttp Request:\n");
+    {
+        UcUri_c* uriBase = UcUri_c::resolveUri("http://www.163.com/ba/bb/bc/bd/.?bq=bq#basefra", NULL);
+        uriBase->print();
+        MSG("\n");
+
+        UcUri_c* uriRel = UcUri_c::resolveUri("ra?rq=rq#relfra", uriBase);
+        uriRel->print();
+        MSG("\n");
+
+        UcHttpRequest_c httpReq(uriRel);
+        httpReq.setMethod(HTTP_REQ_METHOD_POST);
+        httpReq.setMultiPart();
+        httpReq.setReferer(HTTP_REQ_REFERER_PATH);
+        httpReq.setRange(0xfffffff, 0xffffffff);
+        char sBuf[256];
+        int nContentLen = 0;
+
+        UcOutputStreamRetCode_e ret;
+
+        MSG("HTTP Header:\n---------\n");
+        do
+        {
+            ret = httpReq.generate(sBuf, 256, nContentLen);
+
+            *(sBuf + nContentLen) = 0;
+            MSG("%s", sBuf);
+
+            nContentLen = 0;
+        } while (OUTPUT_GEN_COMPLETE != ret);
+
+        MSG("---------\n");
+    }
+
+    return 0;
+}
+
+#endif
+

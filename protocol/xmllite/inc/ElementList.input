@@ -1,0 +1,125 @@
+%{
+#include "w3c/inc/UcWebTagInfo.h"
+/*!!!!!! Important notes!!!!
+
+1. gperf  --struct-type --ignore-case -N elementLook -H GetElementHash ElementList.input > elementListAUTO.h
+
+2. Please use below to replace the get method. It looks like      
+  if ((((unsigned char)*str ^ (unsigned char)*s) & ~32) == 0 && !gperf_case_strcmp (str, s))
+  Please replace it as below. 
+  if ((((UC_BYTE)*str ^ (UC_BYTE)*s) & ~32) == 0 
+			  && !WMLStrNICmp(str, s, len))
+3. Remove the gperf_case_strcmp code.
+
+4. Avoid the name conflict with the attributeListAUTO.h for 
+#define TOTAL_KEYWORDS 85
+#define MIN_WORD_LENGTH 1
+#define MAX_WORD_LENGTH 10
+#define MIN_HASH_VALUE 1
+#define MAX_HASH_VALUE 217
+
+Recommend to add a prefix to it.
+
+ */
+%}
+struct Wap2Keyword {const UC_BYTE * name;UC_INT token;};
+%%
+p,             WEB_TAG_TYPE_P
+tt,            WEB_TAG_TYPE_TT
+dt,            WEB_TAG_TYPE_DT
+template,      WEB_TAG_TYPE_TEMPLATE
+style,         WEB_TAG_TYPE_STYLE
+select,        WEB_TAG_TYPE_SELECT
+td,            WEB_TAG_TYPE_TD
+span,          WEB_TAG_TYPE_SPAN
+dd,            WEB_TAG_TYPE_DD
+optgroup,      WEB_TAG_TYPE_OPTGROUP
+noop,          WEB_TAG_TYPE_NOOP
+option,        WEB_TAG_TYPE_OPTION
+onevent,       WEB_TAG_TYPE_ONEVENT
+noscript,      WEB_TAG_TYPE_NOSCRIPT
+postfield,     WEB_TAG_TYPE_POSTFIELD
+table,         WEB_TAG_TYPE_TABLE
+target,        WEB_TAG_TYPE_TARGET
+do,            WEB_TAG_TYPE_DO
+textarea,      WEB_TAG_TYPE_TEXTAREA
+samp,          WEB_TAG_TYPE_SAMP
+q,             WEB_TAG_TYPE_Q
+dfn,           WEB_TAG_TYPE_DFN
+assign,        WEB_TAG_TYPE_ASSIGN
+address,       WEB_TAG_TYPE_ADDRESS
+pre,           WEB_TAG_TYPE_PRE
+prev,          WEB_TAG_TYPE_PREV
+a,             WEB_TAG_TYPE_A
+kbd,           WEB_TAG_TYPE_KBD
+title,         WEB_TAG_TYPE_TITLE
+setvar,        WEB_TAG_TYPE_SETVAR
+div,           WEB_TAG_TYPE_DIV
+body,          WEB_TAG_TYPE_BODY
+input,         WEB_TAG_TYPE_INPUT
+object,        WEB_TAG_TYPE_OBJECT
+meta,          WEB_TAG_TYPE_META
+param,         WEB_TAG_TYPE_PARAM
+legend,        WEB_TAG_TYPE_LEGEND
+var,           WEB_TAG_TYPE_VAR
+base,          WEB_TAG_TYPE_BASE
+em,            WEB_TAG_TYPE_EM
+sup,           WEB_TAG_TYPE_SUP
+form,          WEB_TAG_TYPE_FORM
+anchor,        WEB_TAG_TYPE_ANCHOR
+fieldset,      WEB_TAG_TYPE_FIELDSET
+b,             WEB_TAG_TYPE_B
+tr,            WEB_TAG_TYPE_TR
+strong,        WEB_TAG_TYPE_STRONG
+wml,           WEB_TAG_TYPE_WML
+timer,         WEB_TAG_TYPE_TIMER
+i,             WEB_TAG_TYPE_I
+small,         WEB_TAG_TYPE_SMALL
+go,            WEB_TAG_TYPE_GO
+link,          WEB_TAG_TYPE_LINK
+blockquote,    WEB_TAG_TYPE_BLOCKQUOTE
+abbr,          WEB_TAG_TYPE_ABBR
+script,        WEB_TAG_TYPE_SCRIPT
+dl,            WEB_TAG_TYPE_DL
+sub,           WEB_TAG_TYPE_SUB
+code,          WEB_TAG_TYPE_CODE
+button,        WEB_TAG_TYPE_BUTTON
+ol,            WEB_TAG_TYPE_OL
+head,          WEB_TAG_TYPE_HEAD
+br,            WEB_TAG_TYPE_BR
+u,             WEB_TAG_TYPE_U
+card,          WEB_TAG_TYPE_CARD
+label,         WEB_TAG_TYPE_LABEL
+access,        WEB_TAG_TYPE_ACCESS
+caption,       WEB_TAG_TYPE_CAPTION
+li,            WEB_TAG_TYPE_LI
+cite,          WEB_TAG_TYPE_CITE
+refresh,       WEB_TAG_TYPE_REFRESH
+img,           WEB_TAG_TYPE_IMG
+acronym,       WEB_TAG_TYPE_ACRONYM
+big,           WEB_TAG_TYPE_BIG
+html,          WEB_TAG_TYPE_HTML
+ul,            WEB_TAG_TYPE_UL
+h6,            WEB_TAG_TYPE_H6
+ucf,           WEB_TAG_TYPE_UCF
+hr,            WEB_TAG_TYPE_HR
+h5,            WEB_TAG_TYPE_H5
+h4,            WEB_TAG_TYPE_H4
+th,            WEB_TAG_TYPE_TH
+h3,            WEB_TAG_TYPE_H3
+h2,            WEB_TAG_TYPE_H2
+h1,            WEB_TAG_TYPE_H1
+font,          WEB_TAG_TYPE_FONT
+strike,        WEB_TAG_TYPE_STRIKE
+dir,           WEB_TAG_TYPE_DIR
+group,         WEB_TAG_TYPE_GROUP
+history,       WEB_TAG_TYPE_HISTORY
+info,          WEB_TAG_TYPE_INFO
+item,          WEB_TAG_TYPE_ITEM
+menu,          WEB_TAG_TYPE_MENU
+preference,    WEB_TAG_TYPE_PREFERENCE
+searchhistory, WEB_TAG_TYPE_SEARCHHISTORY
+sys_conf,      WEB_TAG_TYPE_SYS_CONF
+sys_conf_map,  WEB_TAG_TYPE_SYS_CONF_MAP
+sys_info,      WEB_TAG_TYPE_SYS_INFO
+urlhistory,    WEB_TAG_TYPE_URLHISTORY
