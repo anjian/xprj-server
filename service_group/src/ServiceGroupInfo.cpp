@@ -58,6 +58,17 @@ bool SERVICE_GROUP_INFO_QUERY(int nId, const char*& sHost, const char*& sPort)
     return true;
 }
 
+// For master service group
+void SERVICE_GROUP_INFO_LOAD()
+{
+    ServiceGroupMgr_c::getInstance()->load();
+}
+
+void SERVICE_GROUP_INFO_SAVE()
+{
+    ServiceGroupMgr_c::getInstance()->save();
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // ServiceGroup_c implementation

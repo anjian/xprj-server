@@ -15,4 +15,5 @@ alias source : [ glob src/*.cpp ] : ;
 
 exe dispatcher : my_library source :
 <linkflags>-lrt
+<linkflags>-lsqlite3
 ;

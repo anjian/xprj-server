@@ -1,6 +1,6 @@
 create table userinfo (
         id              INTEGER UNIQUE,
-        sgid            INTEGER,                        -- service group id
+        sgid            INTEGER                         -- service group id
         );
 
 create table useraccount (
@@ -17,11 +17,26 @@ create table sginfo (
         );
 
 
---insert into people (id, firstname, lastname, phonenumber) values
---(1, 'Fred', 'Flintstone', '5055551234');
+insert into userinfo (id, sgid) values (1, 1000);
+insert into userinfo (id, sgid) values (2, 1000);
+insert into userinfo (id, sgid) values (3, 1000);
+insert into userinfo (id, sgid) values (4, 1000);
+insert into userinfo (id, sgid) values (5, 1000);
 
---insert into people (id, firstname, lastname, phonenumber) values
---(2, 'Wilma', 'Flintstone', '5055551234');
+insert into userinfo (id, sgid) values (10, 1001);
+insert into userinfo (id, sgid) values (11, 1001);
+insert into userinfo (id, sgid) values (12, 1001);
 
---insert into people (id, firstname, lastname, phonenumber) values
---(3, 'Barny', 'Rubble', '5055554321');
+
+insert into useraccount (id, account, type) values (1, 'jtest1', 0);
+insert into useraccount (id, account, type) values (2, 'jtest2', 0);
+insert into useraccount (id, account, type) values (3, 'jtest3', 0);
+insert into useraccount (id, account, type) values (4, 'jtest4', 0);
+insert into useraccount (id, account, type) values (5, 'jtest5', 0);
+
+insert into useraccount (id, account, type) values (10, 'jtest10', 0);
+insert into useraccount (id, account, type) values (11, 'jtest11', 0);
+insert into useraccount (id, account, type) values (12, 'jtest12', 0);
+
+insert into sginfo (id, host, port, type) values (1000, '192.168.42.62', '8080', 0);
+insert into sginfo (id, host, port, type) values (1001, '192.168.42.62', '8081', 0);

@@ -1,3 +1,4 @@
+#include <sqlite3.h>
 
 #include <common/inc/MyDebug.h>
 #include <common/inc/os_type.h>
@@ -92,7 +93,6 @@ bool tlvTest()
 
 
 #include <stdio.h>
-#include <sqlite3.h>
 
 int sqliteTest(void)
 {

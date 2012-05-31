@@ -174,7 +174,7 @@ template <class T> class HashString_c : public Hash_c<T>
             g_hash_table_replace(this->htTable_m, sKey, value);
         }
 
-        T remove(char* key)
+        T remove(const char* key)
         {
             if (NULL == this->htTable_m)
             {
@@ -188,7 +188,7 @@ template <class T> class HashString_c : public Hash_c<T>
             return ret;
         }
 
-        T lookup(char* key)
+        T lookup(const char* key)
         {
             if (NULL == this->htTable_m)
             {
