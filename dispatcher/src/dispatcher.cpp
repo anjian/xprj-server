@@ -11,8 +11,6 @@
 #include <UserService/inc/EventDispatcher.h>
 #include <dispatcher/inc/RequestHandler.h>
 
-#define DISPATCHER_SERVER_PORT      "8081"
-
 #if 0
 #include <interface/protocol/TlvIf.h>
 #include <interface/protocol/tlv.h>
@@ -234,7 +232,7 @@ int main(int argc, char* argv[])
 #endif
 
     SET_SERVER_REQUEST_HANDLER(requestHandler);
-    IO_SOCKET_START_LISTENER(DISPATCHER_SERVER_PORT);
+    IO_SOCKET_START_LISTENER(SYS_INFO_GET_STRING(SYS_INFO_TYPE_SERVICE_PORT));
 
     return 0;
 }

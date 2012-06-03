@@ -49,7 +49,7 @@ bool UserAccountMgr_c::insert(const char* sAccount, long long nUserId, int nType
     return true;
 }
 
-bool UserAccountMgr_c::query(const char* sAccount, long long& nUserId, int nType)
+bool UserAccountMgr_c::query(const char* sAccount, int nType, long long& nUserId)
 {
     nUserId = 0;
     nType   = ACC_TYPE_INTERNAL;
@@ -65,8 +65,12 @@ bool UserAccountMgr_c::query(const char* sAccount, long long& nUserId, int nType
         return false;
     }
 
+    if (nType != pAccount->getType())
+    {
+        return false;
+    }
+
     nUserId = pAccount->getUserId();
-    nType   = pAccount->getType();
 
     return true;
 }

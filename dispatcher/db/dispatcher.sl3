@@ -38,5 +38,5 @@ insert into useraccount (id, account, type) values (10, 'jtest10', 0);
 insert into useraccount (id, account, type) values (11, 'jtest11', 0);
 insert into useraccount (id, account, type) values (12, 'jtest12', 0);
 
-insert into sginfo (id, host, port, type) values (1000, '192.168.42.62', '8080', 0);
-insert into sginfo (id, host, port, type) values (1001, '192.168.42.62', '8081', 0);
+insert into sginfo (id, host, port, type) values (1000, '127.0.0.1', '8081', 0);
+insert into sginfo (id, host, port, type) values (1001, '127.0.0.1', '8082', 0);

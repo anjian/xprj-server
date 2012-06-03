@@ -34,6 +34,7 @@ bool DispatcherInit_c::initialize()
         return false;
     }
 
+    SERVICE_GROUP_INFO_SET_MASTER();
     SERVICE_GROUP_INFO_LOAD();
 
     return true;

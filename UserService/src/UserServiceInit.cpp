@@ -448,16 +448,21 @@ bool UserServiceInit_c::loadUserBuddies(sqlite3 *pConn)
 
     while (SQLITE_ROW == sqlite3_step(res))
     {
+        int nSgId = sqlite3_column_int(res, 3);
+
         // 1st user
         UserInfo_c* pUser = pUserCenter->lookupUser(sqlite3_column_int64(res, 1));
         if (NULL != pUser)
         {
-            pUser->addBuddy(sqlite3_column_int64(res, 0), sqlite3_column_int(res, 3));
+            pUser->addBuddy(sqlite3_column_int64(res, 0), nSgId);
         }
         else
         {
             // TODO: dirty data, to be cleaned
         }
+
+        // add into service group list
+        SERVICE_GROUP_INFO_ADD(nSgId);
     }
 
     sqlite3_finalize(res);

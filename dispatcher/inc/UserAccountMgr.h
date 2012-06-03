@@ -40,7 +40,7 @@ class UserAccountMgr_c
         static UserAccountMgr_c* getInstance();
 
         bool insert(const char* sAccount, long long nUserId, int nType);
-        bool query(const char* sAccount, long long& nUserId, int nType);
+        bool query(const char* sAccount, int nType, long long& nUserId);
         bool remove(const char* sAccount);
     protected:
         UserAccountMgr_c();
