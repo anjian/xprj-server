@@ -156,7 +156,7 @@ bool handleServiceGroupQuery(TlvAttrIf_i* pAttr, TempSimpleVector_c<TlvAttrIf_i*
     const char* sHost = NULL;
     const char* sPort = NULL;
 
-    if (SERVICE_GROUP_INFO_QUERY(nSgId, sHost, sPort) || (NULL == sHost) || (NULL == sPort))
+    if (!SERVICE_GROUP_INFO_QUERY(nSgId, sHost, sPort) || (NULL == sHost) || (NULL == sPort))
     {
         return false;
     }

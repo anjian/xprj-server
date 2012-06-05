@@ -5,7 +5,17 @@
 
 void RequestItem_c::release()
 {
-    setHandler(NULL);
+    if (0 != getSocketFd())
+    {
+        IO_SOCKET_CLOSE(getSocketFd());
+        setSocketFd(0);
+    }
 
-    IO_SOCKET_CLOSE(getSocketFd());
+
+    if (NULL != getHandler())
+    {
+        getHandler()->unbind();
+    }
+
+    unbind();
 }

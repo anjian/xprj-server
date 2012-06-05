@@ -80,11 +80,12 @@ class RequestHandlerIf_i
             //}
             if (NULL != pRequester_m)
             {
-                pRequester_m->setHandler(NULL);
-            }
+                pRequester_m->unbind();
+                pRequester_m->release();
 
-            // unbind requester and handler
-            pRequester_m = NULL;
+                // unbind requester and handler
+                pRequester_m = NULL;
+            }
         }
 
         inline void setRequester(RequestItemIf_i* pRequester)   { pRequester_m = pRequester; }

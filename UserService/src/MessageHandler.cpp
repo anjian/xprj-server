@@ -3,10 +3,9 @@
 #include <common/inc/MyStdLibrary.h>
 
 #include <interface/baseos/TempMemBuffer.h>
-
 #include <interface/protocol/TlvIf.h>
+#include <interface/service_group/ServiceGroupIf.h>
 
-//#include <UserService/inc/ServiceGroupInfo.h>
 #include <UserService/inc/MessageHandler.h>
 
 #if 0
@@ -54,6 +53,7 @@ bool serverResponseHandler(TempSimpleVector_c<TlvAttrIf_i*>* pResponse)
         {
             case TLV_ATTR_SERVICE_GROUP_UPDATE:
                 {
+                    SERVICE_GROUP_INFO_UPDATE(pAttr);
                     //ServiceGroupMgr_c::getInstance()->handleServiceGroupUpdate(pAttr);
                 }
                 break;

@@ -45,6 +45,7 @@ int IO_SOCKET_WRITE(int nFd, TempMemBuffer_c& tbSend)
 
 void IO_SOCKET_CLOSE(int nFd)
 {
+    MSG("close socket [%d]\n", nFd);
     close(nFd);
 }
 
@@ -577,10 +578,22 @@ int Listener_c::start(const char* sPort)
 
                         if (!bProcessed)
                         {
-                            done = true;
+                            MSG("error occurred while handling request, release fd [%d]\n", events[nEvtIndex].data.fd);
+
+                            /* Closing the descriptor will make epoll remove it
+                               from the set of descriptors which are monitored. */
+                            //close(events[nEvtIndex].data.fd);
+                        }
+                        else
+                        {
+                            RequestItemMgr_c::getInstance()->releaseReqItem(events[nEvtIndex].data.fd);
                         }
                         // Write the response back
                         //writeData(events[nEvtIndex].data.fd, bufSend);
+                    }
+                    else
+                    {
+                        RequestItemMgr_c::getInstance()->releaseReqItem(events[nEvtIndex].data.fd);
                     }
                 }
                 else
@@ -591,7 +604,7 @@ int Listener_c::start(const char* sPort)
 
                 if (done)
                 {
-                    MSG("Closed connection on descriptor fd [%d]\n", events[nEvtIndex].data.fd);
+                    MSG("Close connection on descriptor fd [%d]\n", events[nEvtIndex].data.fd);
 
                     /* Closing the descriptor will make epoll remove it
                        from the set of descriptors which are monitored. */

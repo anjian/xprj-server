@@ -3,7 +3,9 @@
 
 #include <interface/system/GlobalInstanceMgr.h>
 #include <interface/data_proxy/DataProxyIf.h>
+#include <interface/service_group/ServiceGroupIf.h>
 #include <interface/protocol/TlvIf.h>
+#include <interface/system/SystemInfoIf.h>
 
 #include <data_proxy/net/inc/NetDataProxy.h>
 
@@ -84,9 +86,20 @@ void NetDataNode_c::allocateIoTrans()
     const char* sHost = NULL;
     const char* sPort = NULL;
 
-    // TODO: query service group info
-    sHost = "127.0.0.1";
-    sPort = "8081";
+    // query service group info
+    if (nSgId_m > 0)
+    {
+        if (!SERVICE_GROUP_INFO_QUERY(nSgId_m, sHost, sPort) || (NULL == sHost) || (NULL == sPort))
+        {
+            return;
+        }
+    }
+    else
+    {
+        // message to dispatcher
+        sHost = SYS_INFO_GET_STRING(SYS_INFO_TYPE_DI_HOST);
+        sPort = SYS_INFO_GET_STRING(SYS_INFO_TYPE_DI_PORT);
+    }
 
     pIoTrans_m = IO_TRANSACTION_ALLOC(this, sHost, sPort); 
     if (NULL != pIoTrans_m)

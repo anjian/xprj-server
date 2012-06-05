@@ -248,7 +248,7 @@ bool ServiceGroupMgr_c::load()
     }
 
     bool bRet = loadSgInfo(pConn);
-    if (bRet)
+    if (!bRet)
     {
         MSG_ERR("load sg info error\n");
     }
@@ -455,7 +455,8 @@ bool ServiceGroupMgr_c::sendSGCheckEvent(int nSgId)
     delete tlvSG;
 
     MSG("insert app event\n");
-    SEND_NET_REQUEST(nSgId, tbBuffer.getBuffer(), tbBuffer.getLength());
+    // TODO: remove magic number
+    SEND_NET_REQUEST(-1, tbBuffer.getBuffer(), tbBuffer.getLength());
 
     return true;
 }

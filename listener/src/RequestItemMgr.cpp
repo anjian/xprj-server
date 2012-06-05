@@ -52,6 +52,8 @@ void RequestItemMgr_c::releaseReqItem(RequestItem_c* pReqItem)
         return;
     }
 
+    pReqItem->release();
+
     lstReqItemObj_m.append(pReqItem);
 }
 
@@ -132,6 +134,8 @@ bool RequestItemMgr_c::processRequest(RequestItem_c* pItem, const char* pRequest
         // new requester, try to get proper handler
         (*funcReqHandlerCB_m)(pItem, &lstDecodedAttrs);
 
+        // let requester close the connection
+#if 0
         // if no handler, close connection
         if (NULL == pItem->getHandler())
         {
@@ -139,6 +143,7 @@ bool RequestItemMgr_c::processRequest(RequestItem_c* pItem, const char* pRequest
 
             IO_SOCKET_CLOSE(pItem->getSocketFd());
         }
+#endif
     }
 
     // release tlv attributes
