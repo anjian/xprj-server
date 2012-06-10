@@ -240,12 +240,6 @@ bool handleUserConnecting(TlvAttrIf_i* pAttr, TempSimpleVector_c<TlvAttrIf_i*>* 
             }
         }
         delete pIterator;
-
-        // could not find service group id
-        if (NULL == pItem)
-        {
-            return false;
-        }
     }
 
     if (NULL == sAccount)
@@ -371,7 +365,7 @@ bool handleUserConnecting(TlvAttrIf_i* pAttr, TempSimpleVector_c<TlvAttrIf_i*>* 
             return false;
         }
 
-        tlvSgPort->setValue_buffer(sPort, xstrlen(sPort));
+        tlvSgPort->setValue_int32(xatoi(sPort));
         tlvSg->appendAttr(tlvSgPort);
     }
 

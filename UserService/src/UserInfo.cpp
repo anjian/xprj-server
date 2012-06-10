@@ -7,6 +7,7 @@
 #include <interface/protocol/TlvIf.h>
 #include <interface/protocol/tlv.h>
 #include <interface/data_proxy/DataProxyIf.h>
+#include <interface/system/SystemInfoIf.h>
 
 #include <UserService/inc/ChatInfo.h>
 #include <UserService/inc/UserCenter.h>
@@ -16,7 +17,7 @@
 
 UserInfo_c::UserInfo_c() :
     nUserId_m(0),
-    nServiceGroupId_m(0),
+    //nServiceGroupId_m(0),
     sScreenName_m(NULL),
     nLevel_m(0),
     nLastHeartBeat_m(0),
@@ -85,7 +86,8 @@ void UserInfo_c::setUserPixmap(const void* pBuf, int nLen)
 
 bool UserInfo_c::isOnline()
 {
-    return ((Time_c::getTimestamp() - nLastHeartBeat_m) < ONLINE_THRESHOLD);
+    return (NULL != getRequester());
+    //return ((Time_c::getTimestamp() - nLastHeartBeat_m) < ONLINE_THRESHOLD);
 }
 
 void UserInfo_c::addBuddy(long long nBuddyId, int nSGId)
@@ -395,7 +397,7 @@ void UserInfo_c::sendChatToBuddy(ChatInfo_c* pChat, TlvAttrIf_i* pTlvChat)
         return;
     }
 
-    if (nBuddySGId != nServiceGroupId_m)
+    if (nBuddySGId != SYS_INFO_GET_INT(SYS_INFO_TYPE_SERVICE_GROUP_ID))
     {
         // send by network message
         sendChatByNet(nBuddySGId, pTlvChat);

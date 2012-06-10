@@ -21,7 +21,7 @@ class UserInfo_c : public RequestHandlerIf_i
         ~UserInfo_c();
 
         inline void setUserId(long long nId)            { nUserId_m = nId; }
-        inline void setServiceGroupId(int nId)          { nServiceGroupId_m = nId; }
+        //inline void setServiceGroupId(int nId)          { nServiceGroupId_m = nId; }
         inline void setLevel(int nLevel)                { nLevel_m = nLevel; }
 
         void setScreenName(const char* sName);
@@ -31,7 +31,7 @@ class UserInfo_c : public RequestHandlerIf_i
         inline long long* getUserIdAddress()    { return &nUserId_m; }
 
         inline long long getUserId()            { return nUserId_m; }
-        inline int getServiceGroupId()          { return nServiceGroupId_m; }
+        //inline int getServiceGroupId()          { return nServiceGroupId_m; }
         inline const char* getScreenName()      { return sScreenName_m; }
         inline int getUserLevel()               { return nLevel_m; }
 
@@ -68,7 +68,7 @@ class UserInfo_c : public RequestHandlerIf_i
 
     private:
         long long nUserId_m;
-        int nServiceGroupId_m;
+        //int nServiceGroupId_m;
         char* sScreenName_m;
         int nLevel_m;
 

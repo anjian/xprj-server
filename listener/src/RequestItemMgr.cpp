@@ -99,6 +99,8 @@ bool RequestItemMgr_c::handleRequest(int nFd, TempMemBuffer_c& dataReceived)
         if (TlvParser_c::isMessageCompleted(pReqItem->getRequest(), pReqItem->getLength()))
         {
             bRet= processRequest(pReqItem, pReqItem->getRequest(), pReqItem->getLength());
+
+            pReqItem->releaseBuffer();
         }
     }
     else
@@ -106,6 +108,8 @@ bool RequestItemMgr_c::handleRequest(int nFd, TempMemBuffer_c& dataReceived)
         if (TlvParser_c::isMessageCompleted(dataReceived.getBuffer(), dataReceived.getLength()))
         {
             bRet = processRequest(pReqItem, dataReceived.getBuffer(), dataReceived.getLength());
+
+            pReqItem->releaseBuffer();
         }
         else
         {

@@ -530,6 +530,8 @@ int Listener_c::start(const char* sPort)
                 TempMemBuffer_c bufReceived;
                 TempMemBuffer_c bufSend;
 
+                bufReceived.clear();
+
                 while (1)
                 {
                     ssize_t count;
@@ -583,9 +585,9 @@ int Listener_c::start(const char* sPort)
                             /* Closing the descriptor will make epoll remove it
                                from the set of descriptors which are monitored. */
                             //close(events[nEvtIndex].data.fd);
-                        }
-                        else
-                        {
+                        //}
+                        //else
+                        //{
                             RequestItemMgr_c::getInstance()->releaseReqItem(events[nEvtIndex].data.fd);
                         }
                         // Write the response back

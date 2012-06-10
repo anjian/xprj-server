@@ -10,7 +10,7 @@ void RequestItem_c::release()
         IO_SOCKET_CLOSE(getSocketFd());
         setSocketFd(0);
     }
-
+#if 0
 
     if (NULL != getHandler())
     {
@@ -18,4 +18,5 @@ void RequestItem_c::release()
     }
 
     unbind();
+#endif
 }

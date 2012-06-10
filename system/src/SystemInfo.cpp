@@ -46,7 +46,9 @@ const char * SYS_INFO_GET_STRING(SysInfoType_e eType)
 
 int SYS_INFO_GET_INT(SysInfoType_e eType)
 {
-    return 0;
+    const char* sValue = SYS_INFO_GET_STRING(eType);
+
+    return (NULL == sValue) ? 0 : xatoi(sValue);
 }
 
 void SYS_INFO_SET_VALUE(SysInfoType_e eType, const char* sValue, int nLen)

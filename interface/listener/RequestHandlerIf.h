@@ -80,8 +80,9 @@ class RequestHandlerIf_i
             //}
             if (NULL != pRequester_m)
             {
-                pRequester_m->unbind();
                 pRequester_m->release();
+
+                pRequester_m->unbind();
 
                 // unbind requester and handler
                 pRequester_m = NULL;
