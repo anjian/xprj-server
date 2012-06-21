@@ -9,6 +9,8 @@
 ChatInfo_c::ChatInfo_c() :
     nFrom_m(0),
     nTo_m(0),
+    nId_m(0),
+    bRead_m(false),
     eType_m(TLV_CHAT_TYPE_TEXT)
 {
     nGotTime_m = Time_c::getTimestamp();
@@ -21,6 +23,8 @@ ChatInfo_c::ChatInfo_c(ChatInfo_c* pChat)
         nGotTime_m      = pChat->nGotTime_m;
         nFrom_m         = pChat->nFrom_m;
         nTo_m           = pChat->nTo_m;
+        nId_m           = pChat->nId_m;
+        bRead_m         = pChat->bRead_m;
 
         eType_m         = pChat->eType_m;
         tbChatInfo_m.append(pChat->tbChatInfo_m.getBuffer(), pChat->tbChatInfo_m.getLength());
@@ -29,6 +33,7 @@ ChatInfo_c::ChatInfo_c(ChatInfo_c* pChat)
     {
         nFrom_m = 0;
         nTo_m   = 0;
+        nId_m   = 0;
         eType_m = TLV_CHAT_TYPE_TEXT;
         nGotTime_m = Time_c::getTimestamp();
     }

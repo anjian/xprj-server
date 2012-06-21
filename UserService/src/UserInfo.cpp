@@ -135,6 +135,11 @@ void UserInfo_c::processRequest(TempSimpleVector_c<TlvAttrIf_i*>* lstRequest)
                     handleLogout(pAttr);
                 }
                 break;
+            case TLV_ATTR_CHAT_RESP:
+                {
+                    handleChatRespInfo(pAttr);
+                }
+                break;
             case TLV_ATTR_CLIENT_VERSION:
             case TLV_ATTR_TAIL_FLAG:
                 {
@@ -146,6 +151,105 @@ void UserInfo_c::processRequest(TempSimpleVector_c<TlvAttrIf_i*>* lstRequest)
     }
 }
 
+ChatInfo_c* UserInfo_c::buildChatInfo(TlvAttrIf_i* pAttr)
+{
+    if (NULL == pAttr)
+    {
+        return NULL;
+    }
+
+    TlvAttrIterator_i* pIterator = pAttr->getIterator();
+    if (NULL == pIterator)
+    {
+        return NULL;
+    }
+
+    // organize chat info
+    //long long nUserId   = 0;
+    long long nFrom     = 0;
+    long long nTo       = 0;
+    long long nDate     = 0;
+    int nType           = TLV_CHAT_TYPE_TEXT;
+    int nChatId         = 0;
+    const char* pContent= NULL;
+    int nContentLen     = 0;
+
+    TlvAttrIf_i* pItem = NULL;
+    for (;(pItem = pIterator->next());)
+    {
+        switch (pItem->getType())
+        {
+            case TLV_ATTR_USER_ID:
+                {
+                    //nUserId = pItem->getInt64();
+                    break;
+                }
+            case TLV_ATTR_DATE:
+                {
+                    nDate = pItem->getInt64();
+                    break;
+                }
+            case TLV_ATTR_CHAT_ID:
+                {
+                    nChatId = pItem->getInt32();
+                    break;
+                }
+            case TLV_ATTR_CHAT_FROM:
+                {
+                    nFrom = pItem->getInt64();
+                    break;
+                }
+            case TLV_ATTR_CHAT_TO:
+                {
+                    nTo = pItem->getInt64();
+                    break;
+                }
+            case TLV_ATTR_CHAT_TYPE:
+                {
+                    nType = pItem->getByte();
+                    break;
+                }
+            case TLV_ATTR_CHAT_CONTENT:
+                {
+                    pContent = pItem->getValue();
+                    nContentLen = pItem->getValueLen();
+                    break;
+                }
+            default:;
+        }
+    }
+    delete pIterator;
+
+    // check message
+    if ((0 == nFrom) || (0 == nTo) || (NULL == pContent) || (0 >= nContentLen))
+    {
+        MSG("illegal chat info\n");
+        return NULL;
+    }
+
+    ChatInfo_c* pChat = new ChatInfo_c;
+    if (NULL == pChat)
+    {
+        MSG_ERR("Memory error: could not allocate memory for chat item\n");
+        return NULL;
+    }
+
+    pChat->setUserId(nUserId_m);
+
+    pChat->setFrom(nFrom);
+    pChat->setTo(nTo);
+    pChat->setId(nChatId);
+    pChat->setType((TlvAttrChatType_e)nType);
+    pChat->appendChat(pContent, nContentLen);
+
+    if (-1 != nDate)
+    {
+        pChat->setGotTime(nDate);
+    }
+
+    return pChat;
+}
+
 bool UserInfo_c::handleChatInfo(TlvAttrIf_i* pAttr)
 {
     if ((NULL == pAttr) || (TLV_ATTR_CHAT != pAttr->getType()))
@@ -153,6 +257,7 @@ bool UserInfo_c::handleChatInfo(TlvAttrIf_i* pAttr)
         return false;
     }
 
+#if 0
     TlvAttrIterator_i* pIterator = pAttr->getIterator();
     if (NULL == pIterator)
     {
@@ -221,12 +326,20 @@ bool UserInfo_c::handleChatInfo(TlvAttrIf_i* pAttr)
         MSG("illegal chat info\n");
         return false;
     }
+#endif
 
-    if (nFrom == nUserId_m)
+    ChatInfo_c* pChat = buildChatInfo(pAttr);
+    if (NULL == pChat)
     {
-        sendChatRespMessage(nChatId);
+        return false;
     }
 
+    if (pChat->getFrom() == nUserId_m)
+    {
+        sendChatRespMessage(pChat->getId());
+    }
+
+#if 0
     ChatInfo_c* pChat = new ChatInfo_c;
     if (NULL == pChat)
     {
@@ -236,6 +349,7 @@ bool UserInfo_c::handleChatInfo(TlvAttrIf_i* pAttr)
 
     pChat->setFrom(nFrom);
     pChat->setTo(nTo);
+    pChat->setId(nChatId);
     pChat->setType((TlvAttrChatType_e)nType);
     pChat->appendChat(pContent, nContentLen);
 
@@ -243,11 +357,76 @@ bool UserInfo_c::handleChatInfo(TlvAttrIf_i* pAttr)
     {
         pChat->setGotTime(nDate);
     }
+#endif
 
     addChat(pChat, pAttr);
     
     return true;
 }
+
+bool UserInfo_c::handleChatRespInfo(TlvAttrIf_i* pAttr)
+{
+    if ((NULL == pAttr) || (TLV_ATTR_CHAT_RESP != pAttr->getType()))
+    {
+        return false;
+    }
+
+    TlvAttrIterator_i* pIterator = pAttr->getIterator();
+    if (NULL == pIterator)
+    {
+        return false;
+    }
+
+    // organize chat info
+    int nChatId         = 0;
+
+    TlvAttrIf_i* pItem = NULL;
+    for (;(pItem = pIterator->next());)
+    {
+        switch (pItem->getType())
+        {
+            case TLV_ATTR_CHAT_ID:
+                {
+                    nChatId = pItem->getInt32();
+                    break;
+                }
+            default:;
+        }
+    }
+    delete pIterator;
+
+    // find service group id
+    if (0 == nChatId)
+    {
+        MSG("illegal chat response info: missing chat ID\n");
+        return false;
+    }
+
+    // remove chat id from chatResp list, and mark it as received
+    {
+        ChatInfo_c* pChat = NULL; 
+
+        for (int nIndex=lstChatWaitingForRsp_m.size()-1; nIndex>=0; nIndex--)
+        {
+            if (lstChatWaitingForRsp_m.get(nIndex)->getId() == nChatId)
+            {
+                pChat = lstChatWaitingForRsp_m.takeAt(nIndex);
+                break;
+            }
+        }
+
+        // set chat as read in database
+        if (NULL != pChat)
+        {
+            pChat->setAsRead();
+
+            // TODO: dump to database
+        }
+    }
+    
+    return true;
+}
+
 
 bool UserInfo_c::handleLogout(TlvAttrIf_i* pAttr)
 {
@@ -336,12 +515,15 @@ bool UserInfo_c::sendChatRespMessage(int nChatId)
     return true;
 }
 
-void UserInfo_c::sendChatToUser(TlvAttrIf_i* pTlvChat)
+void UserInfo_c::sendChatToUser(ChatInfo_c* pChat, TlvAttrIf_i* pTlvChat)
 {
     TempSimpleVector_c<TlvAttrIf_i*> lstAttrs(8);
 
     lstAttrs.append(pTlvChat);
     sendMessage(&lstAttrs);
+
+    // append into request list to wait for reponse
+    //lstChatRequest_m.append(pChat->getId());
 }
 
 void UserInfo_c::addChat(ChatInfo_c* pChat, TlvAttrIf_i* pTlvChat)
@@ -351,40 +533,66 @@ void UserInfo_c::addChat(ChatInfo_c* pChat, TlvAttrIf_i* pTlvChat)
         return;
     }
 
-    if ((isOnline()) && (pChat->getTo() == nUserId_m))
+    if (pChat->getTo() == nUserId_m)
     {
-        sendChatToUser(pTlvChat);
+        sendChatToClient(pChat, pTlvChat);
+    }
+    else if (pChat->getFrom() == nUserId_m)
+    {
+        nLastHeartBeat_m = Time_c::getTimestamp();
+
+        // send it to destination
+        sendChatToBuddy(pChat, pTlvChat);
+
+        pChat->setAsRead();
+        // TODO: save it into databse
+        //
     }
     else
     {
-        if (pChat->getFrom() == nUserId_m)
-        {
-            nLastHeartBeat_m = Time_c::getTimestamp();
-
-            // send it to destination
-            sendChatToBuddy(pChat, pTlvChat);
-        }
+        // error case
+        delete pChat;
     }
 
-    // TODO: save it into databse
-    //
     return;
 }
 
-void UserInfo_c::receiveChat(ChatInfo_c* pChat, TlvAttrIf_i* pTlvChat)
+void UserInfo_c::receiveChat(TlvAttrIf_i* pTlvChat)
 {
-    if ((NULL == pChat) || (pChat->getTo() != nUserId_m))
+    if (NULL == pTlvChat)
     {
         return;
     }
 
-    if (isOnline())
+    ChatInfo_c* pChat = buildChatInfo(pTlvChat);
+    if (NULL == pChat)
     {
-        sendChatToUser(pTlvChat);
-        //lstChats_m.append(pChat);
+        return;
     }
 
-    // TODO: save it into databse
+    if (pChat->getTo() != nUserId_m)
+    {
+        delete pChat;
+        return;
+    }
+
+    sendChatToClient(pChat, pTlvChat);
+
+    return;
+}
+
+void UserInfo_c::sendChatToClient(ChatInfo_c* pChat, TlvAttrIf_i* pTlvChat)
+{
+    if (isOnline())
+    {
+        sendChatToUser(pChat, pTlvChat);
+
+        lstChatWaitingForRsp_m.append(pChat);
+    }
+    else
+    {
+        // TODO: dump to db
+    }
 }
 
 void UserInfo_c::sendChatToBuddy(ChatInfo_c* pChat, TlvAttrIf_i* pTlvChat)
@@ -404,12 +612,8 @@ void UserInfo_c::sendChatToBuddy(ChatInfo_c* pChat, TlvAttrIf_i* pTlvChat)
     }
     else
     {
-        // the buddy at the same service group, route a duplicate message directly
-        ChatInfo_c* pNewChat = new ChatInfo_c(pChat);
-        if (NULL != pNewChat)
-        {
-            UserCenter_c::getInstance()->sendChatTo(pNewChat, pTlvChat);
-        }
+        // the buddy at the same service group, route directly
+        UserCenter_c::getInstance()->sendChatTo(pChat->getTo(), pTlvChat);
     }
 }
 

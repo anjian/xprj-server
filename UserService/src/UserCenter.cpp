@@ -160,15 +160,15 @@ bool UserCenter_c::handleChatInfo(TlvAttrIf_i* pAttr)
 }
 #endif
 
-bool UserCenter_c::sendChatTo(ChatInfo_c* pChat, TlvAttrIf_i* pTlvChat)
+bool UserCenter_c::sendChatTo(long long nUserId, TlvAttrIf_i* pTlvChat)
 {
-    UserInfo_c* pUser = lookupUser(pChat->getTo());
+    UserInfo_c* pUser = lookupUser(nUserId);
     if (NULL == pUser)
     {
-        MSG("Could not find user [%d]\n", pChat->getTo());
+        MSG("Could not find user [%d]\n", nUserId);
         return false;
     }
 
-    pUser->receiveChat(pChat, pTlvChat);
+    pUser->receiveChat(pTlvChat);
     return true;
 }

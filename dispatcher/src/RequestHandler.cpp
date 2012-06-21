@@ -83,6 +83,12 @@ bool requestHandler(RequestItemIf_i* pReqItem, TempSimpleVector_c<TlvAttrIf_i*>*
         tlvEncoder.generate(&pResponse, tbResponse);
 
         IO_SOCKET_WRITE(pReqItem->getSocketFd(), tbResponse);
+
+        // release message items
+        for (int nIndex=pResponse.size()-1; nIndex>=0; nIndex--)
+        {
+            delete pResponse.takeLast();
+        }
     }
 
     return true;

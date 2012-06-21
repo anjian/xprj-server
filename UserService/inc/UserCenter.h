@@ -19,7 +19,7 @@ class UserCenter_c
         void removeUser(long long nId);
 
         //bool handleChatInfo(TlvAttrIf_i* pAttr);
-        bool sendChatTo(ChatInfo_c* pChat, TlvAttrIf_i* pTlvChat);
+        bool sendChatTo(long long nUserId, TlvAttrIf_i* pTlvChat);
 
     protected:
         UserCenter_c();

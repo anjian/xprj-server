@@ -43,7 +43,10 @@ class UserInfo_c : public RequestHandlerIf_i
         void addBuddy(long long nBuddyId, int nSGId);
         void removeBuddy(long long nBuddyId);
 
-        void receiveChat(ChatInfo_c* pChat, TlvAttrIf_i* pAttr);
+        bool handleChatInfo(TlvAttrIf_i* pAttr);
+        bool handleChatRespInfo(TlvAttrIf_i* pAttr);
+
+        void receiveChat(TlvAttrIf_i* pAttr);
 
         ////////////////////////////////////////////////////////////////////////////////
         // RequestHandlerIf_i
@@ -54,17 +57,21 @@ class UserInfo_c : public RequestHandlerIf_i
 
     protected:
 
-        bool handleChatInfo(TlvAttrIf_i* pAttr);
         bool handleLogout(TlvAttrIf_i* pAttr);
 
         void addChat(ChatInfo_c* pChat, TlvAttrIf_i* pTlvChat);
         void sendChatToBuddy(ChatInfo_c* pChat, TlvAttrIf_i* pTlvChat);
         bool sendChatByNet(int nSgId, TlvAttrIf_i* pTlvChat);
 
-        void sendChatToUser(TlvAttrIf_i* pTlvChat);
+        void sendChatToClient(ChatInfo_c* pChat, TlvAttrIf_i* pTlvChat);
+
+        void sendChatToUser(ChatInfo_c* pChat, TlvAttrIf_i* pTlvChat);
         bool sendChatRespMessage(int nChatId);
 
         int getBuddySGId(long long nBuddyId);
+
+        // based on given message build ChatInfo content
+        ChatInfo_c* buildChatInfo(TlvAttrIf_i* pTlvChat);
 
     private:
         long long nUserId_m;
@@ -79,6 +86,9 @@ class UserInfo_c : public RequestHandlerIf_i
 
         SimpleVector<BuddyStatus_t> lstBuddys_m;
         SimpleVector<ChatInfo_c*> lstChats_m;
+
+        // chat request to user, waiting for the reponse from client
+        SimpleVector<ChatInfo_c*> lstChatWaitingForRsp_m;
 };
 
 #if 0

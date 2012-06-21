@@ -138,16 +138,13 @@ bool RequestItemMgr_c::processRequest(RequestItem_c* pItem, const char* pRequest
         // new requester, try to get proper handler
         (*funcReqHandlerCB_m)(pItem, &lstDecodedAttrs);
 
-        // let requester close the connection
-#if 0
         // if no handler, close connection
         if (NULL == pItem->getHandler())
         {
             releaseReqItem(pItem->getSocketFd());
 
-            IO_SOCKET_CLOSE(pItem->getSocketFd());
+            //IO_SOCKET_CLOSE(pItem->getSocketFd());
         }
-#endif
     }
 
     // release tlv attributes

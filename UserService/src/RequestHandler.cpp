@@ -6,6 +6,7 @@
 
 #include <interface/protocol/TlvIf.h>
 #include <interface/protocol/tlv.h>
+#include <interface/listener/ListenerIf.h>
 
 #include <UserService/inc/UserCenter.h>
 #include <UserService/inc/UserInfo.h>
@@ -43,10 +44,16 @@ bool RequestHandler_c::process(int nFd, TempMemBuffer_c& dataReceived, TempMemBu
 ////////////////////////////////////////////////////////////////////////////////
 // declare private functions
 ////////////////////////////////////////////////////////////////////////////////
-bool handleVersionAttr(TlvAttrIf_i* pAttr, TempSimpleVector_c<TlvAttrIf_i*>* pResponse);
+bool handleVersionAttr(TempSimpleVector_c<TlvAttrIf_i*>* pResponse);
 bool handleTailAttr(TempSimpleVector_c<TlvAttrIf_i*>* pResponse);
-bool handleUserConnecting(RequestItemIf_i* pReqItem, TlvAttrIf_i* pAttr);
+//bool handleUserConnecting(RequestItemIf_i* pReqItem, TlvAttrIf_i* pAttr);
+
+// user auth request
 bool handleUserAuth(RequestItemIf_i* pReqItem, TlvAttrIf_i* pAttr);
+
+// chat info from other service groups
+bool handleChatInfo(RequestItemIf_i* pReqItem, TlvAttrIf_i* pAttr, TempSimpleVector_c<TlvAttrIf_i*>* pResponse);
+
 //bool handleServiceGroupQuery(TlvAttrIf_i* pAttr, TempSimpleVector_c<TlvAttrIf_i*>* pResponse);
 
 bool clientRequestHandler(RequestItemIf_i* pReqItem, TempSimpleVector_c<TlvAttrIf_i*>* pRequest)
@@ -56,6 +63,7 @@ bool clientRequestHandler(RequestItemIf_i* pReqItem, TempSimpleVector_c<TlvAttrI
         return false;
     }
 
+    TempSimpleVector_c<TlvAttrIf_i*> pResponse(8);
 #if 0
     // handle version attribute
     {
@@ -83,15 +91,20 @@ bool clientRequestHandler(RequestItemIf_i* pReqItem, TempSimpleVector_c<TlvAttrI
                     handleServiceGroupQuery(pAttr, pResponse);
                 }
                 break;
-#endif
             case TLV_ATTR_USER_CONNECTING:
                 {
                     handleUserConnecting(pReqItem, pAttr);
                 }
                 break;
+#endif
             case TLV_ATTR_USER_AUTH:
                 {
                     handleUserAuth(pReqItem, pAttr);
+                }
+                break;
+            case TLV_ATTR_CHAT:
+                {
+                    handleChatInfo(pReqItem, pAttr, &pResponse);
                 }
                 break;
             case TLV_ATTR_CLIENT_VERSION:
@@ -104,6 +117,33 @@ bool clientRequestHandler(RequestItemIf_i* pReqItem, TempSimpleVector_c<TlvAttrI
         }
     }
 
+    if (pResponse.size() > 0)
+    {
+        // build messages with header & tail info
+        TempSimpleVector_c<TlvAttrIf_i*> pResp(8);
+        handleVersionAttr(&pResp);
+
+        for (int nIndex=0; nIndex<pResponse.size(); nIndex++)
+        {
+            pResp.append(pResponse.get(nIndex));
+        }
+
+        handleTailAttr(&pResp);
+        pResponse.clear();
+
+        TempMemBuffer_c tbResponse;
+        TlvEncoder_c tlvEncoder;
+        tlvEncoder.generate(&pResp, tbResponse);
+
+        IO_SOCKET_WRITE(pReqItem->getSocketFd(), tbResponse);
+
+        // release message items
+        for (int nIndex=pResp.size()-1; nIndex>=0; nIndex--)
+        {
+            delete pResp.takeLast();
+        }
+    }
+
 #if 0
     // append tail 
     handleTailAttr(pResponse);
@@ -112,7 +152,7 @@ bool clientRequestHandler(RequestItemIf_i* pReqItem, TempSimpleVector_c<TlvAttrI
     return true;
 }
 
-bool handleVersionAttr(TlvAttrIf_i* pAttr, TempSimpleVector_c<TlvAttrIf_i*>* pResponse)
+bool handleVersionAttr(TempSimpleVector_c<TlvAttrIf_i*>* pResponse)
 {
     TlvAttrIf_i* tlvVer = createTlvAttribute(TLV_ATTR_CLIENT_VERSION);
     if (NULL == tlvVer)
@@ -120,10 +160,10 @@ bool handleVersionAttr(TlvAttrIf_i* pAttr, TempSimpleVector_c<TlvAttrIf_i*>* pRe
         return false;
     }
 
-    tlvVer->setValue_buffer(pAttr->getValue(), pAttr->getValueLen());
+    // TODO: get version from system info
+    //  or: retrive the client version, and the following message handling may depend on it
+    tlvVer->setValue_int32(0x0001);
     pResponse->append(tlvVer);
-
-    // TODO: retrive the client version, and the following message handling may depend on it
 
     return true;
 }
@@ -143,6 +183,7 @@ bool handleTailAttr(TempSimpleVector_c<TlvAttrIf_i*>* pResponse)
     return true;
 }
 
+#if 0
 bool handleUserConnecting(RequestItemIf_i* pReqItem, TlvAttrIf_i* pAttr)
 {
     TlvAttrIterator_i* pIterator = pAttr->getIterator();
@@ -153,7 +194,9 @@ bool handleUserConnecting(RequestItemIf_i* pReqItem, TlvAttrIf_i* pAttr)
 
     return true;
 }
+#endif
 
+// TODO: to be reorganized: move to UserInfo_c
 bool sendAuthResponse(UserInfo_c* pUser, long long nUserId)
 {
     TempSimpleVector_c<TlvAttrIf_i*> lstAttrs(8);
@@ -258,6 +301,111 @@ bool handleUserAuth(RequestItemIf_i* pReqItem, TlvAttrIf_i* pAttr)
 
     // send response message
     sendAuthResponse(pUser, nUserId);
+
+    return true;
+}
+
+// handle chat request from other service group, it must be destination of this chat
+bool handleChatInfo(RequestItemIf_i* pReqItem, TlvAttrIf_i* pAttr, TempSimpleVector_c<TlvAttrIf_i*>* pResponse)
+{
+    TlvAttrIterator_i* pIterator = pAttr->getIterator();
+    if (NULL == pIterator)
+    {
+        return false;
+    }
+
+    // organize chat info
+    long long nUserId   = 0;
+    long long nFrom     = 0;
+    long long nTo       = 0;
+    int nChatId         = 0;
+
+    TlvAttrIf_i* pItem = NULL;
+    for (;(pItem = pIterator->next());)
+    {
+        switch (pItem->getType())
+        {
+            case TLV_ATTR_USER_ID:
+                {
+                    nUserId = pItem->getInt64();
+                    break;
+                }
+            case TLV_ATTR_CHAT_ID:
+                {
+                    nChatId = pItem->getInt32();
+                    break;
+                }
+            case TLV_ATTR_CHAT_FROM:
+                {
+                    nFrom = pItem->getInt64();
+                    break;
+                }
+            case TLV_ATTR_CHAT_TO:
+                {
+                    nTo = pItem->getInt64();
+                    break;
+                }
+            default:;
+        }
+    }
+    delete pIterator;
+
+    // 
+    if ((0 == nUserId) || (0 == nFrom) || (0 == nTo))
+    {
+        MSG("illegal chat info\n");
+        return false;
+    }
+
+    if (nFrom != nUserId)
+    {
+        MSG_ERR("It's not chat destination, error encountered\n");
+        return false;
+    }
+
+    // find user based on TO
+    UserInfo_c* pUser = UserCenter_c::getInstance()->lookupUser(nTo);
+    if (NULL == pUser)
+    {
+        MSG_ERR("Could not find user [%d]\n", nTo);
+        return false;
+    }
+
+    if (pUser->handleChatInfo(pAttr))
+    {
+        // build chat reponse to source service group
+        TlvAttrIf_i* pTlvResp = createTlvAttribute(TLV_ATTR_CHAT_RESP);
+        if (NULL == pTlvResp)
+        {
+            return false;
+        }
+
+        // user id
+        TlvAttrIf_i* pTlvUserId = createTlvAttribute(TLV_ATTR_USER_ID);
+        if (NULL == pTlvUserId)
+        {
+            delete pTlvResp;
+            return false;
+        }
+        pTlvUserId->setValue_int64(nUserId);
+        pTlvResp->appendAttr(pTlvUserId);
+
+        // chat id
+        TlvAttrIf_i* pTlvChatId = createTlvAttribute(TLV_ATTR_CHAT_ID);
+        if (NULL == pTlvChatId)
+        {
+            delete pTlvResp;
+            return false;
+        }
+        pTlvChatId->setValue_int32(nChatId);
+        pTlvResp->appendAttr(pTlvChatId);
+
+        pResponse->append(pTlvResp);
+    }
+    else
+    {
+        // TODO: build failure message to source SG
+    }
 
     return true;
 }
