@@ -24,6 +24,9 @@ class UserInfo_c : public RequestHandlerIf_i
         //inline void setServiceGroupId(int nId)          { nServiceGroupId_m = nId; }
         inline void setLevel(int nLevel)                { nLevel_m = nLevel; }
 
+        inline long long getLastProfileUpdate()         { return nLastProfileUpdate_m; }
+
+        void setLastProfileUpdate();
         void setScreenName(const char* sName);
         void setUserPixmap(const void* pBuf, int nLen);
 
@@ -58,6 +61,7 @@ class UserInfo_c : public RequestHandlerIf_i
     protected:
 
         bool handleLogout(TlvAttrIf_i* pAttr);
+        bool handleGetBuddyReq();
 
         void addChat(ChatInfo_c* pChat, TlvAttrIf_i* pTlvChat);
         void sendChatToBuddy(ChatInfo_c* pChat, TlvAttrIf_i* pTlvChat);
@@ -70,6 +74,8 @@ class UserInfo_c : public RequestHandlerIf_i
 
         int getBuddySGId(long long nBuddyId);
 
+        bool sendChatStatus();
+
         // based on given message build ChatInfo content
         ChatInfo_c* buildChatInfo(TlvAttrIf_i* pTlvChat);
 
@@ -80,12 +86,12 @@ class UserInfo_c : public RequestHandlerIf_i
         int nLevel_m;
 
         long long nLastHeartBeat_m;
+        long long nLastProfileUpdate_m;
 
         void* pPixBuffer_m;
         int nPixLen_m;
 
         SimpleVector<BuddyStatus_t> lstBuddys_m;
-        SimpleVector<ChatInfo_c*> lstChats_m;
 
         // chat request to user, waiting for the reponse from client
         SimpleVector<ChatInfo_c*> lstChatWaitingForRsp_m;

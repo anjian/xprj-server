@@ -5,8 +5,8 @@
 
 #include <interface/system/GlobalInstanceMgr.h>
 #include <interface/system/SystemInfoIf.h>
-
 #include <interface/service_group/ServiceGroupIf.h>
+#include <interface/data_proxy/DataProxyIf.h>
 
 #include <UserService/inc/UserServiceInit.h>
 
@@ -92,6 +92,7 @@ bool tlvTest()
 }
 
 
+#if 0
 #include <stdio.h>
 
 int sqliteTest(void)
@@ -154,6 +155,7 @@ int sqliteTest(void)
 
     return 0;
 }
+#endif
 
 #include <UserService/inc/UserInfo.h>
 #include <UserService/inc/UserCenter.h>
@@ -334,12 +336,7 @@ bool UserServiceInit_c::loadUserData()
         return false;
     }
 
-    sqlite3 *pConn;
-    if (sqlite3_open(sDB, &pConn))
-    {
-        MSG_ERR("Can not open database [%d]\n", sDB);
-        return false;
-    }
+    sqlite3 *pConn = GET_DB_CONNECTION();
 
     if (!loadUserInfo(pConn))
     {
@@ -356,8 +353,6 @@ bool UserServiceInit_c::loadUserData()
 
         return false;
     }
-
-    sqlite3_close(pConn);
 
     return true;
 }

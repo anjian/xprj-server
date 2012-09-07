@@ -1,3 +1,5 @@
+// system library
+#include <sqlite3.h>
 
 #include <common/inc/MyStdLibrary.h>
 #include <common/inc/MyTime.h>
@@ -10,6 +12,7 @@
 #include <interface/system/SystemInfoIf.h>
 
 #include <UserService/inc/ChatInfo.h>
+#include <UserService/inc/ChatCacheDumper.h>
 #include <UserService/inc/UserCenter.h>
 #include <UserService/inc/UserInfo.h>
 
@@ -21,6 +24,7 @@ UserInfo_c::UserInfo_c() :
     sScreenName_m(NULL),
     nLevel_m(0),
     nLastHeartBeat_m(0),
+    nLastProfileUpdate_m(0),
     pPixBuffer_m(NULL),
     nPixLen_m(0)
 {
@@ -84,6 +88,11 @@ void UserInfo_c::setUserPixmap(const void* pBuf, int nLen)
     nPixLen_m = nLen;
 }
 
+void UserInfo_c::setLastProfileUpdate()
+{
+    nLastProfileUpdate_m = Time_c::getTimestamp();
+}
+
 bool UserInfo_c::isOnline()
 {
     return (NULL != getRequester());
@@ -138,6 +147,16 @@ void UserInfo_c::processRequest(TempSimpleVector_c<TlvAttrIf_i*>* lstRequest)
             case TLV_ATTR_CHAT_RESP:
                 {
                     handleChatRespInfo(pAttr);
+                }
+                break;
+            case TLV_ATTR_CHAT_STATUS_QUERY:
+                {
+                    sendChatStatus();
+                }
+                break;
+            case TLV_ATTR_USER_GET_BUDDY_LIST:
+                {
+                    handleGetBuddyReq();
                 }
                 break;
             case TLV_ATTR_CLIENT_VERSION:
@@ -420,13 +439,68 @@ bool UserInfo_c::handleChatRespInfo(TlvAttrIf_i* pAttr)
         {
             pChat->setAsRead();
 
-            // TODO: dump to database
+            // dump to database
+            ChatCacheDumper_c::getInstance()->insertChat(pChat);
         }
     }
     
     return true;
 }
 
+bool UserInfo_c::handleGetBuddyReq()
+{
+    TempSimpleVector_c<TlvAttrIf_i*> lstAttrs(8);
+
+    for (int nIndex=lstBuddys_m.size()-1; nIndex>=0; nIndex--)
+    {
+        BuddyStatus_t* pBuddy = lstBuddys_m.getRef(nIndex);
+        
+        // build message
+        TlvAttrIf_i* tlvBuddy = createTlvAttribute(TLV_ATTR_USER_BUDDY_INFO);
+        if (NULL == tlvBuddy)
+        {
+            continue;
+        }
+
+        // buddy id
+        TlvAttrIf_i* tlvBuddyId = createTlvAttribute(TLV_ATTR_USER_ID);
+        if (NULL == tlvBuddyId)
+        {
+            delete tlvBuddy;
+            continue;
+        }
+        tlvBuddyId->setValue_int64(pBuddy->nBuddyId_m);
+        tlvBuddy->appendAttr(tlvBuddyId);
+
+        // service group id
+        TlvAttrIf_i* tlvSgId = createTlvAttribute(TLV_ATTR_SERVICE_GROUP_ID);
+        if (NULL == tlvSgId)
+        {
+            delete tlvBuddy;
+            continue;
+        }
+        tlvSgId->setValue_int32(pBuddy->nServiceGroupId_m);
+        tlvBuddy->appendAttr(tlvSgId);
+
+        // last update time
+        TlvAttrIf_i* tlvLastUpdate = createTlvAttribute(TLV_ATTR_DATE);
+        if (NULL == tlvLastUpdate)
+        {
+            delete tlvBuddy;
+            continue;
+        }
+        tlvSgId->setValue_int64();
+        tlvBuddy->appendAttr(tlvLastUpdate);
+
+        // append to list
+        lstAttrs.append(tlvBuddy);
+    }
+
+    // send message
+    sendMessage(&lstAttrs);
+
+    return true;
+}
 
 bool UserInfo_c::handleLogout(TlvAttrIf_i* pAttr)
 {
@@ -545,8 +619,9 @@ void UserInfo_c::addChat(ChatInfo_c* pChat, TlvAttrIf_i* pTlvChat)
         sendChatToBuddy(pChat, pTlvChat);
 
         pChat->setAsRead();
-        // TODO: save it into databse
-        //
+
+        // save it into databse
+        ChatCacheDumper_c::getInstance()->insertChat(pChat);
     }
     else
     {
@@ -591,7 +666,8 @@ void UserInfo_c::sendChatToClient(ChatInfo_c* pChat, TlvAttrIf_i* pTlvChat)
     }
     else
     {
-        // TODO: dump to db
+        // user is not online, dump to db
+        ChatCacheDumper_c::getInstance()->insertChat(pChat);
     }
 }
 
@@ -639,6 +715,73 @@ bool UserInfo_c::sendChatByNet(int nSgId, TlvAttrIf_i* pTlvChat)
 
     MSG("insert app event\n");
     SEND_NET_REQUEST(nSgId, tbBuffer.getBuffer(), tbBuffer.getLength());
+
+    return true;
+}
+
+bool UserInfo_c::sendChatStatus()
+{
+    TempSimpleVector_c<TlvAttrIf_i*> lstAttrs(8);
+
+    const char* sChatStatus = "select cFrom, count(1) from chatcache where userid=@userid and hasRead=0 group by cFrom";
+
+    sqlite3 *pConn = GET_DB_CONNECTION();
+
+    sqlite3_stmt *res;
+    const char *tail;
+
+    if (SQLITE_OK != sqlite3_prepare_v2(pConn,
+                sChatStatus,
+                512,
+                &res,
+                &tail))
+    {
+        MSG_ERR("Could not get data from DB\n");
+        return false;
+    }
+
+    sqlite3_bind_int64(res, 1, getUserId());
+
+    while (SQLITE_ROW == sqlite3_step(res))
+    {
+        // build message
+        TlvAttrIf_i* tlvChatUpdate = createTlvAttribute(TLV_ATTR_CHAT_UPDATE);
+        if (NULL == tlvChatUpdate)
+        {
+            continue;
+        }
+
+        // buddy id
+        TlvAttrIf_i* tlvBuddyId = createTlvAttribute(TLV_ATTR_USER_ID);
+        if (NULL == tlvBuddyId)
+        {
+            delete tlvChatUpdate;
+            continue;
+        }
+        tlvBuddyId->setValue_int64(sqlite3_column_int64(res, 0));
+        tlvChatUpdate->appendAttr(tlvBuddyId);
+
+        // message count
+        TlvAttrIf_i* tlvChatCount = createTlvAttribute(TLV_ATTR_CHAT_COUNT);
+        if (NULL == tlvChatCount)
+        {
+            delete tlvChatUpdate;
+            continue;
+        }
+        tlvChatCount->setValue_int32(sqlite3_column_int64(res, 1));
+        tlvChatUpdate->appendAttr(tlvChatCount);
+
+        // append to list
+        lstAttrs.append(tlvChatUpdate);
+    }
+
+    sqlite3_clear_bindings(res);
+    sqlite3_reset(res);
+
+    sqlite3_finalize(res);
+
+    // send message
+    sendMessage(&lstAttrs);
 
     return true;
 }

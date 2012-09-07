@@ -4,7 +4,8 @@ create table userinfo (
         password        varchar(50),                    -- to be encoded
         screenname      varchar(40),
         pic             blob,
-        level           integer
+        level           integer,
+        lastUpdate      integer                         -- last profile update time
         );
 
 create table userdetail (
@@ -54,13 +55,24 @@ create table buddyinfo (
 
 create table chatcache (
         userid          INTEGER,
-        from            INTEGER,
-        to              INTEGER,
-        time            INTEGER,
-        read            INTEGER,                        -- 0: not readed, 1: readed
+        cFrom           INTEGER,
+        cTo             INTEGER,
+        cTime           INTEGER,
+        hasRead         INTEGER,                        -- 0: not readed, 1: readed
         chatType        INTEGER,
         content         BLOB
         );
+
+INSERT INTO "userinfo" VALUES(1,1000,NULL,'james',NULL,1);
+INSERT INTO "userinfo" VALUES(2,1000,NULL,'jtest',NULL,1);
+INSERT INTO "userinfo" VALUES(3,1000,NULL,'jtest1',NULL,1);
+
+INSERT INTO "buddyinfo" VALUES(2,1,0,1000);
+INSERT INTO "buddyinfo" VALUES(3,1,0,1000);
+INSERT INTO "buddyinfo" VALUES(2,3,0,1000);
+INSERT INTO "buddyinfo" VALUES(1,3,0,1000);
+INSERT INTO "buddyinfo" VALUES(1,2,0,1000);
+INSERT INTO "buddyinfo" VALUES(3,2,0,1000);
 
 --insert into people (id, firstname, lastname, phonenumber) values
 --(1, 'Fred', 'Flintstone', '5055551234');

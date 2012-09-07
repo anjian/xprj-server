@@ -28,6 +28,12 @@ bool startBaseService()
         return false;
     }
 
+    if (false == OPEN_DATABASE(SYS_INFO_GET_STRING(SYS_INFO_TYPE_SERVICE_DATABASE)))
+    {
+        MSG_ERR("Could not open system database: %s\n", SYS_INFO_GET_STRING(SYS_INFO_TYPE_SERVICE_DATABASE));
+        return false;
+    }
+
     // set app event dispatcher
     APP_EVENT_SET_DISPATCHER(EventDispatcher_c::getInstance());
 
@@ -155,6 +161,11 @@ int main(int argc, char* argv[])
     SET_CLIENT_RESPONSE_HANDLER(serverResponseHandler);
 
     IO_SOCKET_START_LISTENER(SYS_INFO_GET_STRING(SYS_INFO_TYPE_SERVICE_PORT));
+
+    // exit system, cleanup
+    {
+        CLOSE_DATABASE();
+    }
 
     return 0;
 }

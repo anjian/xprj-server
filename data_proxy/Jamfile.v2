@@ -4,10 +4,11 @@ requirements <include>.  ;
 #import export-rule ;
 
 alias NET_SRC : [ glob net/src/*.cpp ] ;
-#alias DB_SRC : [ glob db/src/*.cpp ] ;
+alias DB_SRC : [ glob db/src/*.cpp ] ;
 
 alias source :
 NET_SRC
+DB_SRC
  : <link>static ;
 
 #lib baseos : source :  <conditional>@export-rule.config-export ;
